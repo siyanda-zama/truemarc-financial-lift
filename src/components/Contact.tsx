@@ -1,7 +1,10 @@
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/components/ui/use-toast";
+import { supabase } from "@/lib/supabase";
 import { 
   MapPin, 
   Phone, 
@@ -13,8 +16,72 @@ import {
 } from "lucide-react";
 
 const Contact = () => {
+  const { toast } = useToast();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formData, setFormData] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: "",
+    service: "",
+    message: "",
+  });
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+
+    try {
+      const { error } = await supabase
+        .from('contact_submissions')
+        .insert([
+          {
+            first_name: formData.firstName,
+            last_name: formData.lastName,
+            email: formData.email,
+            phone: formData.phone,
+            service: formData.service,
+            message: formData.message,
+            created_at: new Date().toISOString(),
+          }
+        ]);
+
+      if (error) throw error;
+
+      // Send email notification (in a real app, this would be handled by a serverless function)
+      // For now, we'll just show a success message
+      toast({
+        title: "Message Sent Successfully!",
+        description: "We'll get back to you within 24 hours.",
+      });
+
+      // Reset form
+      setFormData({
+        firstName: "",
+        lastName: "",
+        email: "",
+        phone: "",
+        service: "",
+        message: "",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "There was a problem sending your message. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
-    <section id="contact" className="py-20 bg-background">
+    <section id="contact" className="py-20 bg-background animate-fade-in">
       <div className="container mx-auto px-6">
         {/* Section Header */}
         <div className="text-center mb-16">
@@ -80,8 +147,8 @@ const Contact = () => {
               <CardContent className="space-y-3">
                 <div className="flex items-center gap-3">
                   <div className="w-2 h-2 bg-secondary rounded-full"></div>
-                  <a href="mailto:admin@truemarc.co.za" className="text-muted-foreground hover:text-primary transition-colors">
-                    admin@truemarc.co.za
+                  <a href="mailto:admin@truemarc.org.za" className="text-muted-foreground hover:text-primary transition-colors">
+                    admin@truemarc.org.za
                   </a>
                 </div>
                 <div className="flex items-center gap-3">
@@ -131,59 +198,112 @@ const Contact = () => {
                 </p>
               </CardHeader>
               <CardContent className="space-y-6">
-                <div className="grid md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-foreground">First Name *</label>
-                    <Input placeholder="Enter your first name" className="border-border focus:border-primary" />
+                <form onSubmit={handleSubmit} className="space-y-6">
+                  <div className="grid md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-foreground">First Name *</label>
+                      <Input 
+                        name="firstName"
+                        value={formData.firstName}
+                        onChange={handleInputChange}
+                        placeholder="Enter your first name" 
+                        className="border-border focus:border-primary" 
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-foreground">Last Name *</label>
+                      <Input 
+                        name="lastName"
+                        value={formData.lastName}
+                        onChange={handleInputChange}
+                        placeholder="Enter your last name" 
+                        className="border-border focus:border-primary" 
+                        required
+                      />
+                    </div>
                   </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-foreground">Last Name *</label>
-                    <Input placeholder="Enter your last name" className="border-border focus:border-primary" />
+
+                  <div className="grid md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-foreground">Email Address *</label>
+                      <Input 
+                        name="email"
+                        type="email"
+                        value={formData.email}
+                        onChange={handleInputChange}
+                        placeholder="Enter your email" 
+                        className="border-border focus:border-primary" 
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-foreground">Phone Number *</label>
+                      <Input 
+                        name="phone"
+                        type="tel"
+                        value={formData.phone}
+                        onChange={handleInputChange}
+                        placeholder="Enter your phone number" 
+                        className="border-border focus:border-primary" 
+                        required
+                      />
+                    </div>
                   </div>
-                </div>
 
-                <div className="grid md:grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <label className="text-sm font-medium text-foreground">Email Address *</label>
-                    <Input type="email" placeholder="Enter your email" className="border-border focus:border-primary" />
+                    <label className="text-sm font-medium text-foreground">Service Needed</label>
+                    <select 
+                      name="service"
+                      value={formData.service}
+                      onChange={handleInputChange}
+                      className="w-full px-3 py-2 border border-border rounded-md focus:border-primary focus:outline-none bg-background"
+                    >
+                      <option value="">Select a service</option>
+                      <option value="credit-repair">Credit Repair</option>
+                      <option value="debt-review">Debt Review</option>
+                      <option value="default-removal">Default Removal</option>
+                      <option value="judgment-clearance">Judgment Clearance</option>
+                      <option value="fraud-listing">Fraud Listing Removal</option>
+                      <option value="general-consultation">General Consultation</option>
+                    </select>
                   </div>
+
                   <div className="space-y-2">
-                    <label className="text-sm font-medium text-foreground">Phone Number *</label>
-                    <Input type="tel" placeholder="Enter your phone number" className="border-border focus:border-primary" />
+                    <label className="text-sm font-medium text-foreground">Message *</label>
+                    <Textarea 
+                      name="message"
+                      value={formData.message}
+                      onChange={handleInputChange}
+                      placeholder="Tell us about your financial situation and how we can help you..."
+                      className="min-h-[120px] border-border focus:border-primary"
+                      required
+                    />
                   </div>
-                </div>
 
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-foreground">Service Needed</label>
-                  <select className="w-full px-3 py-2 border border-border rounded-md focus:border-primary focus:outline-none bg-background">
-                    <option value="">Select a service</option>
-                    <option value="credit-repair">Credit Repair</option>
-                    <option value="debt-review">Debt Review</option>
-                    <option value="default-removal">Default Removal</option>
-                    <option value="judgment-clearance">Judgment Clearance</option>
-                    <option value="fraud-listing">Fraud Listing Removal</option>
-                    <option value="general-consultation">General Consultation</option>
-                  </select>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-foreground">Message *</label>
-                  <Textarea 
-                    placeholder="Tell us about your financial situation and how we can help you..."
-                    className="min-h-[120px] border-border focus:border-primary"
-                  />
-                </div>
-
-                <div className="flex flex-col sm:flex-row gap-4">
-                  <Button variant="cta" size="lg" className="flex-1 group">
-                    <Send className="w-5 h-5 mr-2 group-hover:translate-x-1 transition-transform" />
-                    Send Message
-                  </Button>
-                  <Button variant="professional" size="lg" className="flex-1 group">
-                    <Calendar className="w-5 h-5 mr-2" />
-                    Schedule Call
-                  </Button>
-                </div>
+                  <div className="flex flex-col sm:flex-row gap-4">
+                    <Button 
+                      type="submit"
+                      variant="cta" 
+                      size="lg" 
+                      className="flex-1 group"
+                      disabled={isSubmitting}
+                    >
+                      <Send className="w-5 h-5 mr-2 group-hover:translate-x-1 transition-transform" />
+                      {isSubmitting ? "Sending..." : "Send Message"}
+                    </Button>
+                    <Button 
+                      type="button"
+                      variant="professional" 
+                      size="lg" 
+                      className="flex-1 group"
+                      onClick={() => window.open('tel:0615449643')}
+                    >
+                      <Calendar className="w-5 h-5 mr-2" />
+                      Schedule Call
+                    </Button>
+                  </div>
+                </form>
 
                 <div className="flex items-center gap-3 p-4 bg-muted rounded-lg">
                   <MessageCircle className="w-5 h-5 text-primary flex-shrink-0" />
@@ -207,9 +327,11 @@ const Contact = () => {
                 Take the first step towards financial freedom. Our expert team is ready to analyze your 
                 credit situation and provide you with a personalized action plan.
               </p>
-              <Button variant="cta" size="lg">
-                Get Your Free Credit Analysis Today
-              </Button>
+              <a href="/contact">
+                <Button variant="cta" size="lg">
+                  Get Your Free Credit Analysis Today
+                </Button>
+              </a>
             </CardContent>
           </Card>
         </div>

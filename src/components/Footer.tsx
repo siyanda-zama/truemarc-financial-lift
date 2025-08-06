@@ -55,27 +55,27 @@ const Footer = () => {
             <h3 className="text-xl font-bold mb-6 text-secondary">Quick Links</h3>
             <ul className="space-y-3">
               <li>
-                <a href="#home" className="text-primary-foreground/80 hover:text-secondary transition-colors">
+                <a href="/" className="text-primary-foreground/80 hover:text-secondary transition-colors">
                   Home
                 </a>
               </li>
               <li>
-                <a href="#about" className="text-primary-foreground/80 hover:text-secondary transition-colors">
+                <a href="/about" className="text-primary-foreground/80 hover:text-secondary transition-colors">
                   About Us
                 </a>
               </li>
               <li>
-                <a href="#services" className="text-primary-foreground/80 hover:text-secondary transition-colors">
+                <a href="/services" className="text-primary-foreground/80 hover:text-secondary transition-colors">
                   Our Services
                 </a>
               </li>
               <li>
-                <a href="#why-choose-us" className="text-primary-foreground/80 hover:text-secondary transition-colors">
+                <a href="/why-choose-us" className="text-primary-foreground/80 hover:text-secondary transition-colors">
                   Why Choose Us
                 </a>
               </li>
               <li>
-                <a href="#contact" className="text-primary-foreground/80 hover:text-secondary transition-colors">
+                <a href="/contact" className="text-primary-foreground/80 hover:text-secondary transition-colors">
                   Contact
                 </a>
               </li>
@@ -139,8 +139,8 @@ const Footer = () => {
               </div>
               <div className="flex items-center gap-3">
                 <Mail className="w-5 h-5 text-secondary flex-shrink-0" />
-                <a href="mailto:admin@truemarc.co.za" className="text-primary-foreground/80 hover:text-secondary transition-colors">
-                  admin@truemarc.co.za
+                <a href="mailto:admin@truemarc.org.za" className="text-primary-foreground/80 hover:text-secondary transition-colors">
+                  admin@truemarc.org.za
                 </a>
               </div>
               <div className="flex items-start gap-3">

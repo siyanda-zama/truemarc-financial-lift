@@ -4,7 +4,7 @@ import teamHeroImage from "@/assets/team-hero.jpg";
 
 const Hero = () => {
   return (
-    <section id="home" className="relative min-h-screen flex items-center bg-gradient-subtle overflow-hidden">
+    <section id="home" className="relative min-h-screen flex items-center bg-gradient-subtle overflow-hidden animate-fade-in">
       {/* Background Image with Overlay */}
       <div className="absolute inset-0 z-0">
         <img 
@@ -35,13 +35,17 @@ const Hero = () => {
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 mb-8">
-              <Button variant="cta" size="lg" className="group">
-                Get Free Credit Assessment
-                <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-              </Button>
-              <Button variant="professional" size="lg" className="bg-white/10 border-white/30 text-white hover:bg-white hover:text-primary">
-                Learn More About Us
-              </Button>
+              <a href="/contact">
+                <Button variant="cta" size="lg" className="group w-full">
+                  Get Free Credit Assessment
+                  <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                </Button>
+              </a>
+              <a href="/about">
+                <Button variant="professional" size="lg" className="bg-white/10 border-white/30 text-white hover:bg-white hover:text-primary w-full">
+                  Learn More About Us
+                </Button>
+              </a>
             </div>
 
             {/* Trust Indicators */}

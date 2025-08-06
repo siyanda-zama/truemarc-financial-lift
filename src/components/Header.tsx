@@ -1,12 +1,20 @@
 import { useState } from "react";
+import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Menu, X, Phone, Mail } from "lucide-react";
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const location = useLocation();
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
+  };
+
+  const isActive = (path: string) => {
+    if (path === "/" && location.pathname === "/") return true;
+    if (path !== "/" && location.pathname.startsWith(path)) return true;
+    return false;
   };
 
   return (
@@ -21,7 +29,7 @@ const Header = () => {
             </div>
             <div className="flex items-center gap-2">
               <Mail className="w-4 h-4" />
-              <span>admin@truemarc.co.za</span>
+              <span>admin@truemarc.org.za</span>
             </div>
           </div>
           <div className="hidden md:block">
@@ -34,38 +42,65 @@ const Header = () => {
       <div className="container mx-auto px-6 py-4">
         <div className="flex items-center justify-between">
           {/* Logo */}
-          <div className="flex items-center">
+          <Link to="/" className="flex items-center">
             <img 
               src="/lovable-uploads/8db9213d-a0bf-4063-993a-00814c345c60.png" 
               alt="Truemarc Consultants" 
               className="h-12 w-auto"
             />
-          </div>
+          </Link>
 
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center space-x-8">
-            <a href="#home" className="text-foreground hover:text-primary transition-colors font-medium">
+            <Link 
+              to="/" 
+              className={`transition-colors font-medium ${
+                isActive("/") ? "text-primary" : "text-foreground hover:text-primary"
+              }`}
+            >
               Home
-            </a>
-            <a href="#about" className="text-foreground hover:text-primary transition-colors font-medium">
+            </Link>
+            <Link 
+              to="/about" 
+              className={`transition-colors font-medium ${
+                isActive("/about") ? "text-primary" : "text-foreground hover:text-primary"
+              }`}
+            >
               About
-            </a>
-            <a href="#services" className="text-foreground hover:text-primary transition-colors font-medium">
+            </Link>
+            <Link 
+              to="/services" 
+              className={`transition-colors font-medium ${
+                isActive("/services") ? "text-primary" : "text-foreground hover:text-primary"
+              }`}
+            >
               Services
-            </a>
-            <a href="#why-choose-us" className="text-foreground hover:text-primary transition-colors font-medium">
+            </Link>
+            <Link 
+              to="/why-choose-us" 
+              className={`transition-colors font-medium ${
+                isActive("/why-choose-us") ? "text-primary" : "text-foreground hover:text-primary"
+              }`}
+            >
               Why Choose Us
-            </a>
-            <a href="#contact" className="text-foreground hover:text-primary transition-colors font-medium">
+            </Link>
+            <Link 
+              to="/contact" 
+              className={`transition-colors font-medium ${
+                isActive("/contact") ? "text-primary" : "text-foreground hover:text-primary"
+              }`}
+            >
               Contact
-            </a>
+            </Link>
           </nav>
 
           {/* CTA Button */}
           <div className="hidden md:block">
-            <Button variant="cta" size="lg">
-              Get Free Consultation
-            </Button>
+            <Link to="/contact">
+              <Button variant="cta" size="lg">
+                Get Free Consultation
+              </Button>
+            </Link>
           </div>
 
           {/* Mobile Menu Button */}
@@ -79,46 +114,58 @@ const Header = () => {
 
         {/* Mobile Navigation */}
         {isMenuOpen && (
-          <nav className="md:hidden mt-4 pb-4 border-t border-border">
+          <nav className="md:hidden mt-4 pb-4 border-t border-border animate-slide-in-right">
             <div className="flex flex-col space-y-4 pt-4">
-              <a 
-                href="#home" 
-                className="text-foreground hover:text-primary transition-colors font-medium"
+              <Link 
+                to="/" 
+                className={`transition-colors font-medium ${
+                  isActive("/") ? "text-primary" : "text-foreground hover:text-primary"
+                }`}
                 onClick={() => setIsMenuOpen(false)}
               >
                 Home
-              </a>
-              <a 
-                href="#about" 
-                className="text-foreground hover:text-primary transition-colors font-medium"
+              </Link>
+              <Link 
+                to="/about" 
+                className={`transition-colors font-medium ${
+                  isActive("/about") ? "text-primary" : "text-foreground hover:text-primary"
+                }`}
                 onClick={() => setIsMenuOpen(false)}
               >
                 About
-              </a>
-              <a 
-                href="#services" 
-                className="text-foreground hover:text-primary transition-colors font-medium"
+              </Link>
+              <Link 
+                to="/services" 
+                className={`transition-colors font-medium ${
+                  isActive("/services") ? "text-primary" : "text-foreground hover:text-primary"
+                }`}
                 onClick={() => setIsMenuOpen(false)}
               >
                 Services
-              </a>
-              <a 
-                href="#why-choose-us" 
-                className="text-foreground hover:text-primary transition-colors font-medium"
+              </Link>
+              <Link 
+                to="/why-choose-us" 
+                className={`transition-colors font-medium ${
+                  isActive("/why-choose-us") ? "text-primary" : "text-foreground hover:text-primary"
+                }`}
                 onClick={() => setIsMenuOpen(false)}
               >
                 Why Choose Us
-              </a>
-              <a 
-                href="#contact" 
-                className="text-foreground hover:text-primary transition-colors font-medium"
+              </Link>
+              <Link 
+                to="/contact" 
+                className={`transition-colors font-medium ${
+                  isActive("/contact") ? "text-primary" : "text-foreground hover:text-primary"
+                }`}
                 onClick={() => setIsMenuOpen(false)}
               >
                 Contact
-              </a>
-              <Button variant="cta" className="mt-4">
-                Get Free Consultation
-              </Button>
+              </Link>
+              <Link to="/contact">
+                <Button variant="cta" className="mt-4 w-full">
+                  Get Free Consultation
+                </Button>
+              </Link>
             </div>
           </nav>
         )}

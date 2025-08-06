@@ -5,7 +5,7 @@ import consultantMaleImage from "@/assets/consultant-male.jpg";
 
 const About = () => {
   return (
-    <section id="about" className="py-20 bg-gradient-subtle">
+    <section id="about" className="py-20 bg-gradient-subtle animate-fade-in">
       <div className="container mx-auto px-6">
         {/* Section Header */}
         <div className="text-center mb-16">
@@ -13,13 +13,14 @@ const About = () => {
             About <span className="text-primary">Truemarc Consultants</span>
           </h2>
           <p className="text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
-            Established in 2015, we are South Africa's leading credit repair specialists, 
-            dedicated to restoring financial dignity and creating brighter financial futures.
+            Established in 2015, we are South Africa's leading credit repair specialists with over 9 years of excellence, 
+            dedicated to restoring financial dignity and creating brighter financial futures. We've successfully helped 
+            thousands of South Africans overcome their credit challenges and achieve their financial goals.
           </p>
         </div>
 
         {/* Main Content Grid */}
-        <div className="grid lg:grid-cols-2 gap-16 items-center mb-16">
+        <div className="grid lg:grid-cols-2 gap-16 items-center mb-16 animate-scale-in">
           {/* Left: Image */}
           <div className="relative">
             <div className="relative overflow-hidden rounded-2xl shadow-elegant">
@@ -50,11 +51,17 @@ const About = () => {
               <p className="text-muted-foreground leading-relaxed mb-6">
                 Welcome to Truemarc Consultants, the pioneers in credit repair solutions dedicated to transforming your financial future. 
                 We are a well-established leading consulting company that has assisted thousands of people who are bank declined (blacklisted).
+                Our mission is to restore hope and dignity to those who have faced financial challenges.
               </p>
               <p className="text-muted-foreground leading-relaxed mb-6">
-                Our complex experience in providing blacklist solutions has enabled us to restore our clients' dignity by providing 
-                solutions to their financial needs. We specialize in helping those who have been declined for credit, home loans, 
+                Our extensive experience in providing blacklist solutions has enabled us to restore our clients' dignity by providing 
+                comprehensive solutions to their financial needs. We specialize in helping those who have been declined for credit, home loans, 
                 and car finance due to debt review, defaults, missed payments, bad payment profiles, and low credit scores.
+              </p>
+              <p className="text-muted-foreground leading-relaxed mb-6">
+                With a proven track record of over 1,000 successful cases, our expert team understands the complexities of the South African 
+                credit system. We provide personalized solutions that address each client's unique situation, ensuring the most effective 
+                path to financial recovery and long-term stability.
               </p>
             </div>
 
@@ -75,9 +82,11 @@ const About = () => {
               </div>
             </div>
 
-            <Button variant="hero" size="lg" className="mt-8">
-              Learn More About Our Process
-            </Button>
+            <a href="/services">
+              <Button variant="hero" size="lg" className="mt-8">
+                Learn More About Our Process
+              </Button>
+            </a>
           </div>
         </div>
 

@@ -54,7 +54,7 @@ const WhyChooseUs = () => {
   ];
 
   return (
-    <section id="why-choose-us" className="py-20 bg-gradient-subtle">
+    <section id="why-choose-us" className="py-20 bg-gradient-subtle animate-fade-in">
       <div className="container mx-auto px-6">
         {/* Section Header */}
         <div className="text-center mb-16">
@@ -160,9 +160,11 @@ const WhyChooseUs = () => {
               stability and prosperity. Let's embark on this journey together towards financial empowerment 
               and a brighter tomorrow.
             </p>
-            <Button variant="cta" size="lg">
-              Start Your Financial Transformation Today
-            </Button>
+            <a href="/contact">
+              <Button variant="cta" size="lg">
+                Start Your Financial Transformation Today
+              </Button>
+            </a>
           </CardContent>
         </Card>
       </div>

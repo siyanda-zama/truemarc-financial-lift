@@ -72,7 +72,7 @@ const Services = () => {
   ];
 
   return (
-    <section id="services" className="py-20 bg-background">
+    <section id="services" className="py-20 bg-background animate-fade-in">
       <div className="container mx-auto px-6">
         {/* Section Header */}
         <div className="text-center mb-16">
@@ -149,10 +149,12 @@ const Services = () => {
             Contact Truemarc Consultants today for expert credit repair solutions tailored to your specific needs. 
             Let's embark on this journey together towards financial empowerment.
           </p>
-          <Button variant="cta" size="lg" className="group">
-            Get Your Free Consultation Today
-            <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-          </Button>
+          <a href="/contact">
+            <Button variant="cta" size="lg" className="group">
+              Get Your Free Consultation Today
+              <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+            </Button>
+          </a>
         </div>
       </div>
     </section>
