@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/lib/supabase";
+import { Link } from "react-router-dom";
 import { 
   MapPin, 
   Phone, 
@@ -327,11 +328,11 @@ const Contact = () => {
                 Take the first step towards financial freedom. Our expert team is ready to analyze your 
                 credit situation and provide you with a personalized action plan.
               </p>
-              <a href="/contact">
+              <Link to="/contact">
                 <Button variant="cta" size="lg">
                   Get Your Free Credit Analysis Today
                 </Button>
-              </a>
+              </Link>
             </CardContent>
           </Card>
         </div>

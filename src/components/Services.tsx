@@ -1,5 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Link } from "react-router-dom";
 import { 
   CreditCard, 
   AlertTriangle, 
@@ -133,10 +134,12 @@ const Services = () => {
               organizational success and sustainable growth by leveraging our expertise to address challenges 
               effectively and capitalize on opportunities for long-term prosperity and competitiveness.
             </p>
-            <Button variant="professional" className="group">
-              Learn More About General Consulting
-              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-            </Button>
+            <Link to="/contact">
+              <Button variant="professional" className="group">
+                Learn More About General Consulting
+                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+              </Button>
+            </Link>
           </CardContent>
         </Card>
 
@@ -149,12 +152,12 @@ const Services = () => {
             Contact Truemarc Consultants today for expert credit repair solutions tailored to your specific needs. 
             Let's embark on this journey together towards financial empowerment.
           </p>
-          <a href="/contact">
+          <Link to="/contact">
             <Button variant="cta" size="lg" className="group">
               Get Your Free Consultation Today
               <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
             </Button>
-          </a>
+          </Link>
         </div>
       </div>
     </section>

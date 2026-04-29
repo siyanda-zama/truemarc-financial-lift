@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Shield, Target, Heart, Users } from "lucide-react";
+import { Link } from "react-router-dom";
 import consultantMaleImage from "@/assets/consultant-male.jpg";
 
 const About = () => {
@@ -82,11 +83,11 @@ const About = () => {
               </div>
             </div>
 
-            <a href="/services">
+            <Link to="/services">
               <Button variant="hero" size="lg" className="mt-8">
                 Learn More About Our Process
               </Button>
-            </a>
+            </Link>
           </div>
         </div>
 

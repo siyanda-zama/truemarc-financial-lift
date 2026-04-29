@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { ArrowRight, CheckCircle } from "lucide-react";
+import { Link } from "react-router-dom";
 import teamHeroImage from "@/assets/team-hero.jpg";
 
 const Hero = () => {
@@ -35,17 +36,17 @@ const Hero = () => {
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 mb-8">
-              <a href="/contact">
+              <Link to="/contact" className="w-full sm:w-auto">
                 <Button variant="cta" size="lg" className="group w-full">
                   Get Free Credit Assessment
                   <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                 </Button>
-              </a>
-              <a href="/about">
+              </Link>
+              <Link to="/about" className="w-full sm:w-auto">
                 <Button variant="professional" size="lg" className="bg-white/10 border-white/30 text-white hover:bg-white hover:text-primary w-full">
                   Learn More About Us
                 </Button>
-              </a>
+              </Link>
             </div>
 
             {/* Trust Indicators */}
