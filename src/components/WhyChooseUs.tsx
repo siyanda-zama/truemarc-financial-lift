@@ -1,5 +1,6 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Link } from "react-router-dom";
 import { 
   CheckCircle, 
   Shield, 
@@ -160,11 +161,11 @@ const WhyChooseUs = () => {
               stability and prosperity. Let's embark on this journey together towards financial empowerment 
               and a brighter tomorrow.
             </p>
-            <a href="/contact">
+            <Link to="/contact">
               <Button variant="cta" size="lg">
                 Start Your Financial Transformation Today
               </Button>
-            </a>
+            </Link>
           </CardContent>
         </Card>
       </div>

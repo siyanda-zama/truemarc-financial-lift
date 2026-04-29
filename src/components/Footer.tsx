@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import { Link } from "react-router-dom";
 import { 
   MapPin, 
   Phone, 
@@ -55,29 +56,29 @@ const Footer = () => {
             <h3 className="text-xl font-bold mb-6 text-secondary">Quick Links</h3>
             <ul className="space-y-3">
               <li>
-                <a href="/" className="text-primary-foreground/80 hover:text-secondary transition-colors">
+                <Link to="/" className="text-primary-foreground/80 hover:text-secondary transition-colors">
                   Home
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="/about" className="text-primary-foreground/80 hover:text-secondary transition-colors">
+                <Link to="/about" className="text-primary-foreground/80 hover:text-secondary transition-colors">
                   About Us
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="/services" className="text-primary-foreground/80 hover:text-secondary transition-colors">
+                <Link to="/services" className="text-primary-foreground/80 hover:text-secondary transition-colors">
                   Our Services
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="/why-choose-us" className="text-primary-foreground/80 hover:text-secondary transition-colors">
+                <Link to="/why-choose-us" className="text-primary-foreground/80 hover:text-secondary transition-colors">
                   Why Choose Us
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="/contact" className="text-primary-foreground/80 hover:text-secondary transition-colors">
+                <Link to="/contact" className="text-primary-foreground/80 hover:text-secondary transition-colors">
                   Contact
-                </a>
+                </Link>
               </li>
             </ul>
           </div>
@@ -87,29 +88,29 @@ const Footer = () => {
             <h3 className="text-xl font-bold mb-6 text-secondary">Our Services</h3>
             <ul className="space-y-3">
               <li>
-                <a href="#services" className="text-primary-foreground/80 hover:text-secondary transition-colors">
+                <Link to="/services" className="text-primary-foreground/80 hover:text-secondary transition-colors">
                   Credit Repair
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="#services" className="text-primary-foreground/80 hover:text-secondary transition-colors">
+                <Link to="/services" className="text-primary-foreground/80 hover:text-secondary transition-colors">
                   Debt Review
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="#services" className="text-primary-foreground/80 hover:text-secondary transition-colors">
+                <Link to="/services" className="text-primary-foreground/80 hover:text-secondary transition-colors">
                   Default Removal
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="#services" className="text-primary-foreground/80 hover:text-secondary transition-colors">
+                <Link to="/services" className="text-primary-foreground/80 hover:text-secondary transition-colors">
                   Judgment Clearance
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="#services" className="text-primary-foreground/80 hover:text-secondary transition-colors">
+                <Link to="/services" className="text-primary-foreground/80 hover:text-secondary transition-colors">
                   Fraud Listing Removal
-                </a>
+                </Link>
               </li>
             </ul>
           </div>
