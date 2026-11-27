@@ -24,6 +24,7 @@ for (const file of files.sort()) {
   const html = fs.readFileSync(file, 'utf8')
   const rel = path.relative(DIST, file)
   if (/http-equiv="refresh"/.test(html)) continue // redirect stubs
+  if (/^(?:google[0-9a-f]+|yandex_[0-9a-f]+|BingSiteAuth)\.html$/.test(rel)) continue // search-engine verification files, not pages
   const route = rel === 'index.html' ? '/' : rel === '404.html' ? '/404' : `/${rel.replace(/\/index\.html$/, '')}`
   const head = html.slice(0, html.indexOf('</head>'))
   const body = html.slice(html.indexOf('<body'))
