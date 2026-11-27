@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- Truemarc mark: the logo's red ring with the navy "T" swoosh, drawn heavy enough to read at 16px. -->
+  <rect width="64" height="64" rx="14" fill="#ffffff"/>
+  <circle cx="32" cy="33" r="22.5" fill="none" stroke="#e0262d" stroke-width="6"/>
+  <g fill="none" stroke="#31346a" stroke-linecap="round">
+    <path d="M5 26 C 15 15.5, 34 14.5, 59 19.5" stroke-width="6"/>
+    <path d="M34 19.5 C 32 29, 30 38.5, 26.5 48 C 25.2 51.2, 22.6 52.2, 19.8 50.8" stroke-width="5.5"/>
+  </g>
+</svg>

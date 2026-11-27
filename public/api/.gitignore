@@ -1,0 +1,3 @@
+# Server-only: secrets and captured leads never go in git.
+config.php
+data/

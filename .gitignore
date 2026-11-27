@@ -22,3 +22,9 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Local lead captures (dev middleware)
+.leads
+.env
+.env.*
+!.env.example
