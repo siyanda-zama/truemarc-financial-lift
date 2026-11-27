@@ -1,45 +1,39 @@
-import { useState } from "react";
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Index from "./pages/Index";
-import AboutPage from "./pages/AboutPage";
-import ServicesPage from "./pages/ServicesPage";
-import WhyChooseUsPage from "./pages/WhyChooseUsPage";
-import ContactPage from "./pages/ContactPage";
-import NotFound from "./pages/NotFound";
-import Loader from "./components/Loader";
+import { useEffect } from 'react'
+import { Navigate, Route, Routes } from 'react-router-dom'
+import Layout from '@/components/layout/Layout'
+import Home from '@/pages/Home'
+import ServicesHub from '@/pages/services/ServicesHub'
+import ServicePage from '@/pages/services/ServicePage'
+import HowItWorks from '@/pages/HowItWorks'
+import About from '@/pages/About'
+import Contact from '@/pages/Contact'
+import FreeAssessment from '@/pages/FreeAssessment'
+import LearnHub from '@/pages/learn/LearnHub'
+import Article from '@/pages/learn/Article'
+import Privacy from '@/pages/Privacy'
+import Terms from '@/pages/Terms'
+import NotFound from '@/pages/NotFound'
 
-const queryClient = new QueryClient();
-
-const App = () => {
-  const [isLoading, setIsLoading] = useState(true);
-
-  const handleLoadComplete = () => {
-    setIsLoading(false);
-  };
-
+export default function App() {
+  // Runs after every child's mount effects: hydration of the prerendered page is complete.
+  useEffect(() => { delete document.documentElement.dataset.hydrating }, [])
   return (
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        {isLoading && <Loader onLoadComplete={handleLoadComplete} />}
-        <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/about" element={<AboutPage />} />
-            <Route path="/services" element={<ServicesPage />} />
-            <Route path="/why-choose-us" element={<WhyChooseUsPage />} />
-            <Route path="/contact" element={<ContactPage />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
-      </TooltipProvider>
-    </QueryClientProvider>
-  );
-};
-
-export default App;
+    <Layout>
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/services" element={<ServicesHub />} />
+        <Route path="/services/:slug" element={<ServicePage />} />
+        <Route path="/how-it-works" element={<HowItWorks />} />
+        <Route path="/about" element={<About />} />
+        <Route path="/why-choose-us" element={<Navigate to="/about" replace />} />
+        <Route path="/contact" element={<Contact />} />
+        <Route path="/free-assessment" element={<FreeAssessment />} />
+        <Route path="/learn" element={<LearnHub />} />
+        <Route path="/learn/:slug" element={<Article />} />
+        <Route path="/privacy" element={<Privacy />} />
+        <Route path="/terms" element={<Terms />} />
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    </Layout>
+  )
+}

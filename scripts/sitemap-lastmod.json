@@ -1,0 +1,102 @@
+{
+  "/": {
+    "hash": "9b94e1c0a83d",
+    "lastmod": "2026-11-27"
+  },
+  "/services": {
+    "hash": "8f6b375aa069",
+    "lastmod": "2026-11-27"
+  },
+  "/services/bad-payment-profile": {
+    "hash": "d3d660eb0b44",
+    "lastmod": "2026-11-27"
+  },
+  "/services/default-judgment-removal": {
+    "hash": "3daf1cfa750d",
+    "lastmod": "2026-11-27"
+  },
+  "/services/debt-review": {
+    "hash": "7aebc2bc04a5",
+    "lastmod": "2026-11-27"
+  },
+  "/services/fraud-listing-removal": {
+    "hash": "637610bf40fa",
+    "lastmod": "2026-11-27"
+  },
+  "/services/trace-alert-removal": {
+    "hash": "182a92ca64d1",
+    "lastmod": "2026-11-27"
+  },
+  "/services/admin-order-rescission": {
+    "hash": "047f783e7c4e",
+    "lastmod": "2026-11-27"
+  },
+  "/services/credit-profile-management": {
+    "hash": "4b8aa0e5bab2",
+    "lastmod": "2026-11-27"
+  },
+  "/services/paralegal-blacklisting": {
+    "hash": "7a4e2fffc21e",
+    "lastmod": "2026-11-27"
+  },
+  "/services/labour-relations": {
+    "hash": "9afa5424a762",
+    "lastmod": "2026-11-27"
+  },
+  "/services/general-consulting": {
+    "hash": "8c51e2eace15",
+    "lastmod": "2026-11-27"
+  },
+  "/how-it-works": {
+    "hash": "b3e6da41d853",
+    "lastmod": "2026-11-27"
+  },
+  "/about": {
+    "hash": "b7e0bcb4d1b4",
+    "lastmod": "2026-11-27"
+  },
+  "/contact": {
+    "hash": "afe20885a954",
+    "lastmod": "2026-11-27"
+  },
+  "/free-assessment": {
+    "hash": "5d2214c2ced4",
+    "lastmod": "2026-11-27"
+  },
+  "/learn": {
+    "hash": "7ad0caa98513",
+    "lastmod": "2026-11-27"
+  },
+  "/learn/how-to-get-out-of-debt-review": {
+    "hash": "350b4ab42f80",
+    "lastmod": "2026-11-27"
+  },
+  "/learn/fraud-listing-on-my-name": {
+    "hash": "3e1ebb8b75bd",
+    "lastmod": "2026-11-27"
+  },
+  "/privacy": {
+    "hash": "0a956d2e0322",
+    "lastmod": "2026-11-27"
+  },
+  "/terms": {
+    "hash": "abdb9d433251",
+    "lastmod": "2026-11-27"
+  },
+  "/learn/am-i-blacklisted": {
+    "hash": "5155787e5857",
+    "lastmod": "2026-11-27"
+  },
+  "/learn/how-to-improve-your-credit-score": {
+    "hash": "6ed3297438d7",
+    "lastmod": "2026-11-27"
+  },
+  "/learn/what-is-a-default-listing": {
+    "hash": "cb002676736a",
+    "lastmod": "2026-11-27"
+  },
+  "/learn/how-to-remove-a-judgment": {
+    "hash": "6128f99b96a5",
+    "lastmod": "2026-11-27"
+  }
+}

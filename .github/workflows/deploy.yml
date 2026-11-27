@@ -1,0 +1,493 @@
+# Deploy main to cPanel shared hosting that has FTP only (no SSH), as ZIP RELEASES. See deploy-kit/README.md.
+#
+#   1. BUILD (one step, marked below) writes deploy/public_html/, and optionally deploy/app/ and deploy/root/.
+#   2. Ask the receiver (POST <SITE_URL>/_deploy/hook.php). No receiver yet, or an older one: upload ONLY the
+#      receiver and its stub over FTPS (about ten small files, seconds), then carry on.
+#   3. Pack ONE zip with its SHA-256 and upload it with curl -T over FTPS into ~/<DEPLOY_DIR>/incoming/.
+#   4. The receiver verifies, unpacks, runs the release's app/deploy/after-unpack.php and switches atomically.
+#   5. Purge Cloudflare (optional), smoke test, confirm. A failed smoke test rolls back automatically.
+# Manual rollback: Actions > Deploy > Run workflow > tick "Roll back" (the rollback job below).
+#
+# There is no file-by-file FTP sync in this kit on purpose: 1,200 files took 18 minutes at 250 ms from
+# GitHub's runners; one archive takes seconds.
+#
+# Until the secrets exist, the deploy job skips with a notice and the run stays green.
+# Secrets and variables are REPOSITORY-level (Settings > Secrets and variables > Actions): on GitHub Free,
+# private repositories get no environment secrets (gh secret set --env fails: 404 "failed to fetch public key").
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Dry run: build, pack and ask the server; upload and switch nothing'
+        type: boolean
+        default: false
+      rollback:
+        description: 'Roll back: switch the live site back to the previous release (no build, no upload)'
+        type: boolean
+        default: false
+      rollback_to:
+        description: 'With Roll back, optional: a kept release id, or "legacy" for the site from before the first release'
+        type: string
+        default: ''
+      adopt_existing_site:
+        description: 'First release onto a live site: MOVE its files into ~/DEPLOY_DIR/legacy/<time>/ (never deleted; a rollback restores them)'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+# Explicit bash: GitHub then runs every step with -eo pipefail (the implicit default has no pipefail, so a
+# failing command in front of | tee would go unnoticed).
+defaults:
+  run:
+    shell: bash
+
+# One deploy at a time, in order. A queued deploy waits; it is never cancelled mid-upload.
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+env:
+  # Where the kit lives in this repository: receiver/, public_html/_deploy/hook.php, public_html/.htaccess.template.
+  KIT_DIR: deploy-kit
+  # Folder names in the cPanel home (the FTP account must start there).
+  APP_DIR: ${{ vars.APP_DIR || 'site_app' }}
+  DEPLOY_DIR: ${{ vars.DEPLOY_DIR || 'site_deploy' }}
+  DOCROOT: ${{ vars.DOCROOT || 'public_html' }}
+
+jobs:
+  deploy:
+    name: Deploy
+    # Only main deploys, even when started by hand from another branch. DEPLOY_ON_PUSH=false: pushes do
+    # nothing and you deploy with Run workflow (the free-plan stand-in for an approval gate).
+    if: >-
+      github.ref == 'refs/heads/main' && inputs.rollback != true &&
+      (github.event_name == 'workflow_dispatch' || vars.DEPLOY_ON_PUSH != 'false')
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      DRY_RUN: ${{ inputs.dry_run == true }}
+      ADOPT_EXISTING_SITE: ${{ inputs.adopt_existing_site == true }}
+      DEPLOY_COMMIT: ${{ github.sha }}
+      DEPLOY_RUN: ${{ github.run_id }}
+    steps:
+      - name: Check the deploy configuration
+        id: preflight
+        env:
+          SITE_URL: ${{ vars.SITE_URL }}
+          FTP_SERVER: ${{ secrets.FTP_SERVER }}
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+          DEPLOY_HOOK_TOKEN: ${{ secrets.DEPLOY_HOOK_TOKEN }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ZONE_ID: ${{ secrets.CLOUDFLARE_ZONE_ID }}
+        run: |
+          host="${SITE_URL#https://}"; host="${host#http://}"; host="${host%%/*}"
+          missing=()
+          if [[ -z "$host" ]]; then missing+=("variable SITE_URL"); fi
+          for name in FTP_SERVER FTP_USERNAME FTP_PASSWORD DEPLOY_HOOK_TOKEN; do
+            if [[ -z "${!name}" ]]; then missing+=("secret $name"); fi
+          done
+          if ((${#missing[@]})); then
+            list="$(printf '%s, ' "${missing[@]}")"; list="${list%, }"
+            echo "::notice title=Deploy skipped::Not configured yet. Missing: $list. See deploy-kit/README.md (Setup)."
+            {
+              echo "### Deploy skipped"
+              echo "Missing repository secrets or variables (Settings → Secrets and variables → Actions):"
+              printf -- '- %s\n' "${missing[@]}"
+              echo
+              echo "Set them, then re-run this workflow (deploy-kit/README.md, Setup)."
+            } >> "$GITHUB_STEP_SUMMARY"
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if ! [[ "$host" =~ ^[A-Za-z0-9.-]+(:[0-9]+)?$ ]]; then
+            echo "::error title=Bad SITE_URL::SITE_URL must be the site's address, such as https://example.co.za."
+            exit 1
+          fi
+          if [[ ${#DEPLOY_HOOK_TOKEN} -lt 32 ]]; then
+            echo "::error title=DEPLOY_HOOK_TOKEN too short::The receiver ignores tokens under 32 characters. Generate one with: openssl rand -hex 32"
+            exit 1
+          fi
+          for name in APP_DIR DEPLOY_DIR; do
+            if ! [[ "${!name}" =~ ^[A-Za-z0-9._-]+$ && "${!name}" != . && "${!name}" != .. ]]; then
+              echo "::error title=Bad $name::$name must be a plain folder name in the cPanel home."; exit 1
+            fi
+          done
+          if ! [[ "$DOCROOT" =~ ^[A-Za-z0-9._-]+(/[A-Za-z0-9._-]+)*$ && "/$DOCROOT/" != */../* && "/$DOCROOT/" != */./* ]]; then
+            echo "::error title=Bad DOCROOT::DOCROOT must be the document root folder, relative to the cPanel home (public_html, or an addon domain's folder)."; exit 1
+          fi
+          cloudflare=false
+          if [[ -n "$CLOUDFLARE_API_TOKEN" && -n "$CLOUDFLARE_ZONE_ID" ]]; then cloudflare=true; fi
+          {
+            echo "ready=true"
+            echo "site_url=https://$host"
+            echo "cloudflare=$cloudflare"
+            # Commit + run (+ attempt, so "Re-run" never collides with itself).
+            echo "release_id=${GITHUB_SHA::12}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          } >> "$GITHUB_OUTPUT"
+          echo "Deploying to https://$host (dry run: $DRY_RUN, adopt an existing site: $ADOPT_EXISTING_SITE, Cloudflare purge: $cloudflare)."
+
+      - name: Check out the repository
+        if: steps.preflight.outputs.ready == 'true'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # Add the toolchain your build needs here, for example:
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        if: steps.preflight.outputs.ready == 'true'
+        with: { node-version: 22, cache: npm }
+      # - uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # 2.40.0
+      #   if: steps.preflight.outputs.ready == 'true'
+      #   with: { php-version: '8.2', tools: composer }
+
+      # ══════════════════════════════════════════════════════════════════════════════════════════════
+      # BUILD: the one project-specific step. It must leave
+      #   deploy/public_html/   the files the site serves (required; a 404.html gets a real 404 status)
+      #   deploy/app/           code that must not be web-reachable (optional: a PHP app, its vendor/);
+      #                         app/deploy/after-unpack.php runs on the server before the switch
+      #   deploy/root/          files installed into the real ~/<DOCROOT>/ (optional): root/.htaccess replaces
+      #                         the kit's template; root/api/index.php is a front controller, for example
+      # By default it runs the repository variable BUILD_COMMAND, for example
+      #   plain static site in site/:  mkdir -p deploy && cp -R site deploy/public_html
+      #   Vite / React / Vue SPA:      npm ci && npm run build && mkdir -p deploy && cp -R dist deploy/public_html
+      #   Next.js static export:       npm ci && npx next build && mkdir -p deploy && cp -R out deploy/public_html
+      #   with the mail kit (forms): ... && bash .github/scripts/add-mailkit.sh mailkit deploy
+      # Or replace the run: block below with your own commands.
+      # ══════════════════════════════════════════════════════════════════════════════════════════════
+      - name: BUILD the site into deploy/
+        id: build
+        if: steps.preflight.outputs.ready == 'true'
+        env:
+          BUILD_COMMAND: ${{ vars.BUILD_COMMAND }}
+          # Public Turnstile site key for add-mailkit.sh (written into the release's HTML); optional.
+          TURNSTILE_SITE_KEY: ${{ vars.TURNSTILE_SITE_KEY }}
+        run: |
+          started=$SECONDS
+          if [[ -z "$BUILD_COMMAND" ]]; then
+            echo "::error title=No build configured::Set the repository variable BUILD_COMMAND, or edit the BUILD step in .github/workflows/deploy.yml. It must create deploy/public_html/ (deploy-kit/README.md, Build contract)."
+            exit 1
+          fi
+          bash -euo pipefail -c "$BUILD_COMMAND"
+          if [[ ! -d deploy/public_html ]]; then
+            echo "::error::The build finished, but deploy/public_html/ does not exist (deploy-kit/README.md, Build contract)."
+            exit 1
+          fi
+          echo "Built: $(find deploy -type f | wc -l) files, $(du -sh deploy | cut -f1)."
+          echo "seconds=$((SECONDS - started))" >> "$GITHUB_OUTPUT"
+
+      - name: Check the FTP account
+        id: ftp
+        if: steps.preflight.outputs.ready == 'true'
+        env:
+          FTP_SERVER: ${{ secrets.FTP_SERVER }}
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+          FTP_PORT: ${{ vars.FTP_PORT || '21' }}
+        run: |
+          started=$SECONDS
+          bash .github/scripts/zip-deploy.sh ftp-check
+          echo "seconds=$((SECONDS - started))" >> "$GITHUB_OUTPUT"
+
+      - name: Ask the server (install or update only the receiver if needed)
+        id: server
+        if: steps.preflight.outputs.ready == 'true'
+        env:
+          SITE: ${{ steps.preflight.outputs.site_url }}
+          DEPLOY_HOOK_TOKEN: ${{ secrets.DEPLOY_HOOK_TOKEN }}
+          FTP_SERVER: ${{ secrets.FTP_SERVER }}
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+          FTP_PORT: ${{ vars.FTP_PORT || '21' }}
+        run: |
+          zd=.github/scripts/zip-deploy.sh
+          bash "$zd" detect "$SITE" "$KIT_DIR" | tee "$RUNNER_TEMP/detect.txt"
+          if grep -qx 'bootstrap=true' "$RUNNER_TEMP/detect.txt"; then
+            if [[ "$DRY_RUN" == true ]]; then
+              echo "::notice title=Dry run::A real run would first install the receiver (~/$DEPLOY_DIR/receiver/) and its stub (~/$DOCROOT/_deploy/hook.php). Nothing was uploaded."
+              echo "ready=false" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            started=$SECONDS
+            bash "$zd" bootstrap "$KIT_DIR"
+            bash "$zd" detect "$SITE" "$KIT_DIR" after-bootstrap
+            echo "bootstrapped=true" >> "$GITHUB_OUTPUT"
+            echo "bootstrap_total_seconds=$((SECONDS - started))" >> "$GITHUB_OUTPUT"
+          fi
+          echo "ready=true" >> "$GITHUB_OUTPUT"
+
+      - name: Existing site check (the first release moves it aside, only with consent)
+        id: adopt
+        if: steps.server.outputs.ready == 'true' && steps.server.outputs.layout == 'flat' && steps.server.outputs.adopt_candidates != ''
+        env:
+          CANDIDATES: ${{ steps.server.outputs.adopt_candidates }}
+          SUSPICIOUS: ${{ steps.server.outputs.adopt_suspicious }}
+          KEPT: ${{ steps.server.outputs.kept_in_place }}
+        run: |
+          set -f
+          {
+            echo "### Existing site on the server"
+            echo "The first release **moves** these top-level names out of \`~/$DOCROOT\` into \`~/$DEPLOY_DIR/legacy/<time>/\`. Nothing is deleted, and a rollback puts them back exactly:"
+            for name in $CANDIDATES; do echo "- \`$name\`"; done
+            echo
+            echo "Kept in place: ${KEPT:-nothing}. The .htaccess is replaced (cPanel's blocks are kept; the old file is backed up in the legacy folder)."
+          } >> "$GITHUB_STEP_SUMMARY"
+          echo "First release onto a live site. It would move: $CANDIDATES"
+          if [[ -n "$SUSPICIOUS" ]]; then
+            echo "::warning title=These look like other sites::$SUSPICIOUS look like other sites' document roots (addon domains or subdomains). If they are, add them to DEPLOY_KEEP in ~/$APP_DIR/.env (space separated) first, or those sites go offline."
+          fi
+          if [[ "$ADOPT_EXISTING_SITE" == true ]]; then
+            echo "adopt_existing_site is ticked: the release moves them."
+            echo "adopt=move" >> "$GITHUB_OUTPUT"
+          elif [[ "$DRY_RUN" == true ]]; then
+            echo "::notice title=Dry run::A real run stops here until it is started with adopt_existing_site ticked."
+          else
+            echo "::error title=Existing site found::~/$DOCROOT already holds a site; nothing was changed. Check the list in the run summary, keep anything that must stay with DEPLOY_KEEP in ~/$APP_DIR/.env, then run Actions > Deploy > Run workflow with adopt_existing_site ticked."
+            exit 1
+          fi
+
+      - name: Pack the release
+        id: pack
+        if: steps.preflight.outputs.ready == 'true'
+        env:
+          RELEASE_ID: ${{ steps.preflight.outputs.release_id }}
+          MAX_ARCHIVE_BYTES: ${{ steps.server.outputs.max_archive_bytes }}
+        run: bash .github/scripts/zip-deploy.sh pack deploy "$KIT_DIR" "$RELEASE_ID" "$RUNNER_TEMP/release"
+
+      - name: Dry run - preview the .htaccess a release would install
+        if: steps.preflight.outputs.ready == 'true' && env.DRY_RUN == 'true'
+        env:
+          FTP_SERVER: ${{ secrets.FTP_SERVER }}
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+          FTP_PORT: ${{ vars.FTP_PORT || '21' }}
+        run: |
+          cp deploy/root/.htaccess "$RUNNER_TEMP/preview.htaccess"
+          bash .github/scripts/zip-deploy.sh fetch "$DOCROOT/.htaccess" "$RUNNER_TEMP/live.htaccess"
+          if [[ -f "$RUNNER_TEMP/live.htaccess" ]]; then
+            bash .github/scripts/merge-cpanel-htaccess.sh "$RUNNER_TEMP/live.htaccess" "$RUNNER_TEMP/preview.htaccess"
+          fi
+          echo "--- the end of the .htaccess the next release would install ---"
+          tail -n 25 "$RUNNER_TEMP/preview.htaccess"
+
+      - name: Upload the release over FTPS
+        id: upload
+        if: steps.server.outputs.ready == 'true' && env.DRY_RUN != 'true'
+        env:
+          RELEASE_ID: ${{ steps.preflight.outputs.release_id }}
+          INCOMING: ${{ steps.server.outputs.incoming }}
+          FTP_SERVER: ${{ secrets.FTP_SERVER }}
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+          FTP_PORT: ${{ vars.FTP_PORT || '21' }}
+        run: bash .github/scripts/zip-deploy.sh upload "$RUNNER_TEMP/release" "$RELEASE_ID" "$INCOMING"
+
+      - name: Release (verify, unpack, after-unpack, switch)
+        id: release
+        if: steps.server.outputs.ready == 'true' && env.DRY_RUN != 'true'
+        env:
+          SITE: ${{ steps.preflight.outputs.site_url }}
+          RELEASE_ID: ${{ steps.preflight.outputs.release_id }}
+          DEPLOY_HOOK_TOKEN: ${{ secrets.DEPLOY_HOOK_TOKEN }}
+          # Empty on the first release: the script then probes whether the web server follows symlinks.
+          MODE: ${{ steps.server.outputs.mode }}
+          # Optional repository variable: force "rename" (or "symlink") instead of the probed mode.
+          SWITCH_MODE: ${{ vars.SWITCH_MODE }}
+          ADOPT: ${{ steps.adopt.outputs.adopt }}
+        run: bash .github/scripts/zip-deploy.sh release "$SITE" "$RUNNER_TEMP/release" "$RELEASE_ID"
+
+      # Before the smoke test, so it sees what visitors see. A failed purge must not skip the smoke test
+      # (and with it the automatic rollback), hence continue-on-error.
+      - name: Purge the Cloudflare cache
+        if: steps.release.outcome == 'success' && steps.preflight.outputs.cloudflare == 'true'
+        continue-on-error: true
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ZONE_ID: ${{ secrets.CLOUDFLARE_ZONE_ID }}
+        run: bash .github/scripts/cloudflare-purge.sh
+
+      - name: Smoke test the live site
+        id: smoke
+        if: steps.release.outcome == 'success'
+        env:
+          SITE: ${{ steps.preflight.outputs.site_url }}
+          DEPLOY_HOOK_TOKEN: ${{ secrets.DEPLOY_HOOK_TOKEN }}
+          SMOKE_PATHS: ${{ vars.SMOKE_PATHS || '/' }}
+          SMOKE_EXPECT_RELEASE: ${{ steps.preflight.outputs.release_id }}
+          SMOKE_TAG: ${{ github.run_id }}
+        run: |
+          started=$SECONDS
+          status=0
+          bash .github/scripts/smoke-test.sh "$SITE" || status=$?
+          echo "seconds=$((SECONDS - started))" >> "$GITHUB_OUTPUT"
+          exit "$status"
+
+      - name: Confirm the release
+        id: confirm
+        # A failed confirm is harmless: the release is live, it is just not marked as the known-good one.
+        if: steps.smoke.outcome == 'success'
+        continue-on-error: true
+        env:
+          SITE: ${{ steps.preflight.outputs.site_url }}
+          RELEASE_ID: ${{ steps.preflight.outputs.release_id }}
+          DEPLOY_HOOK_TOKEN: ${{ secrets.DEPLOY_HOOK_TOKEN }}
+        run: bash .github/scripts/zip-deploy.sh confirm "$SITE" "$RELEASE_ID"
+
+      - name: Roll back automatically (the release failed the smoke test)
+        id: autorollback
+        if: failure() && steps.release.outcome == 'success' && steps.smoke.outcome == 'failure'
+        env:
+          SITE: ${{ steps.preflight.outputs.site_url }}
+          RELEASE_ID: ${{ steps.preflight.outputs.release_id }}
+          PREVIOUS: ${{ steps.release.outputs.previous }}
+          DEPLOY_HOOK_TOKEN: ${{ secrets.DEPLOY_HOOK_TOKEN }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ZONE_ID: ${{ secrets.CLOUDFLARE_ZONE_ID }}
+          SMOKE_PATHS: ${{ vars.SMOKE_PATHS || '/' }}
+          SMOKE_TAG: ${{ github.run_id }}-rollback
+        run: |
+          echo "::error title=Release $RELEASE_ID failed the smoke test::Switching the live site back to ${PREVIOUS:-the site from before the first release}."
+          bash .github/scripts/zip-deploy.sh rollback "$SITE"
+          if [[ -n "$CLOUDFLARE_API_TOKEN" && -n "$CLOUDFLARE_ZONE_ID" ]]; then
+            bash .github/scripts/cloudflare-purge.sh || true
+          fi
+          # The old site (no PREVIOUS) may not have the new release's pages: check its home page only.
+          if [[ -z "$PREVIOUS" ]]; then export SMOKE_PATHS=/; fi
+          if SMOKE_EXPECT_RELEASE="${PREVIOUS:-none}" bash .github/scripts/smoke-test.sh "$SITE"; then
+            echo "::error title=Rolled back::Release $RELEASE_ID was rolled back and ${PREVIOUS:-the previous site} passes the smoke test. Anything app/deploy/after-unpack.php changed (a database migration) was not undone. Fix the problem and deploy again."
+          else
+            echo "::error title=Rolled back, still failing::Release $RELEASE_ID was rolled back, but the site still fails the smoke test. Check the server now (deploy-kit/README.md, Troubleshooting)."
+          fi
+          # The run must fail: the commit that was meant to go live is not live.
+          exit 1
+
+      - name: Summary
+        if: always() && steps.preflight.outputs.ready == 'true'
+        env:
+          SITE: ${{ steps.preflight.outputs.site_url }}
+          RELEASE: ${{ steps.release.outputs.release }}
+          PREVIOUS: ${{ steps.release.outputs.previous }}
+          MODE: ${{ steps.release.outputs.mode }}
+          FIRST: ${{ steps.release.outputs.first_release }}
+          LEGACY_DIR: ${{ steps.release.outputs.legacy_dir }}
+          BYTES: ${{ steps.pack.outputs.bytes }}
+          FILES: ${{ steps.pack.outputs.files }}
+          BUILD_SECONDS: ${{ steps.build.outputs.seconds }}
+          FTP_SECONDS: ${{ steps.ftp.outputs.seconds }}
+          BOOTSTRAPPED: ${{ steps.server.outputs.bootstrapped }}
+          BOOTSTRAP_SECONDS: ${{ steps.server.outputs.bootstrap_total_seconds }}
+          PACK_SECONDS: ${{ steps.pack.outputs.pack_seconds }}
+          UPLOAD_SECONDS: ${{ steps.upload.outputs.upload_seconds }}
+          RELEASE_SECONDS: ${{ steps.release.outputs.release_seconds }}
+          SERVER_TIMINGS: ${{ steps.release.outputs.server_timings }}
+          SMOKE_SECONDS: ${{ steps.smoke.outputs.seconds }}
+          CONFIRMED: ${{ steps.confirm.outcome }}
+          ROLLED_BACK: ${{ steps.autorollback.outcome == 'failure' }}
+          STATUS: ${{ job.status }}
+        run: |
+          row() { if [[ -n "$2" ]]; then echo "| $1 | $2 |"; fi; }
+          {
+            echo "### Deploy $([[ "$STATUS" == success ]] && echo succeeded || echo 'did not finish')$([[ "$DRY_RUN" == true ]] && echo ' (dry run: nothing was changed)')"
+            echo "- Site: $SITE, commit \`${GITHUB_SHA::12}\`"
+            if [[ -n "$RELEASE" ]]; then
+              echo "- Release: \`$RELEASE\`, switch mode **${MODE:-?}**, before it: \`${PREVIOUS:-the site from before the first release}\`$([[ "$CONFIRMED" == success ]] && echo ', confirmed')"
+            fi
+            if [[ "$FIRST" == true && -n "$LEGACY_DIR" ]]; then echo "- First release: the old site's files were moved to \`~/$LEGACY_DIR\` (never deleted). Delete that folder in File Manager once you no longer need a way back."; fi
+            if [[ -n "$BYTES" ]]; then echo "- Archive: $((BYTES / 1024)) KB, ${FILES:-?} files"; fi
+            if [[ "$ROLLED_BACK" == true ]]; then echo "- **The release failed the smoke test and was rolled back automatically.**"; fi
+            echo
+            echo "| Step | Time |"
+            echo "|---|---|"
+            row "Build" "${BUILD_SECONDS:+${BUILD_SECONDS}s}"
+            row "FTP check" "${FTP_SECONDS:+${FTP_SECONDS}s}"
+            if [[ "$BOOTSTRAPPED" == true ]]; then row "Receiver install (bootstrap)" "${BOOTSTRAP_SECONDS}s"; fi
+            row "Pack" "${PACK_SECONDS:+${PACK_SECONDS}s}"
+            row "Upload (FTPS)" "${UPLOAD_SECONDS:+${UPLOAD_SECONDS}s}"
+            row "Release call" "${RELEASE_SECONDS:+${RELEASE_SECONDS}s}"
+            row "Server side" "$SERVER_TIMINGS"
+            row "Smoke test" "${SMOKE_SECONDS:+${SMOKE_SECONDS}s}"
+            echo
+            echo "Roll back: Actions → Deploy → Run workflow → tick **Roll back** (about a second; deploy-kit/README.md)."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  rollback:
+    name: Roll back
+    # Manual: Actions > Deploy > Run workflow (branch main) > tick "Roll back". Switches back on the server
+    # in about a second: no build, no upload, and nothing of the release's own code runs.
+    if: github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' && inputs.rollback == true
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check the configuration
+        id: preflight
+        env:
+          SITE_URL: ${{ vars.SITE_URL }}
+          DEPLOY_HOOK_TOKEN: ${{ secrets.DEPLOY_HOOK_TOKEN }}
+          ROLLBACK_TO: ${{ inputs.rollback_to }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ZONE_ID: ${{ secrets.CLOUDFLARE_ZONE_ID }}
+        run: |
+          host="${SITE_URL#https://}"; host="${host#http://}"; host="${host%%/*}"
+          if ! [[ "$host" =~ ^[A-Za-z0-9.-]+(:[0-9]+)?$ ]]; then echo "::error::Set the SITE_URL variable (deploy-kit/README.md)."; exit 1; fi
+          if [[ ${#DEPLOY_HOOK_TOKEN} -lt 32 ]]; then echo "::error::The DEPLOY_HOOK_TOKEN secret is missing or too short."; exit 1; fi
+          if [[ -n "$ROLLBACK_TO" && "$ROLLBACK_TO" != legacy && ! "$ROLLBACK_TO" =~ ^[A-Za-z0-9][A-Za-z0-9._-]{0,79}$ ]]; then
+            echo "::error::rollback_to must be a release id such as 4abb612c0d1e-123456789-1, or legacy."; exit 1
+          fi
+          cloudflare=false
+          if [[ -n "$CLOUDFLARE_API_TOKEN" && -n "$CLOUDFLARE_ZONE_ID" ]]; then cloudflare=true; fi
+          { echo "site_url=https://$host"; echo "cloudflare=$cloudflare"; } >> "$GITHUB_OUTPUT"
+
+      - name: Check out the deploy scripts
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          sparse-checkout: .github/scripts
+          sparse-checkout-cone-mode: false
+
+      - name: Switch back
+        id: rollback
+        env:
+          SITE: ${{ steps.preflight.outputs.site_url }}
+          DEPLOY_HOOK_TOKEN: ${{ secrets.DEPLOY_HOOK_TOKEN }}
+          DEPLOY_COMMIT: ${{ github.sha }}
+          DEPLOY_RUN: ${{ github.run_id }}
+          ROLLBACK_TO: ${{ inputs.rollback_to }}
+        run: bash .github/scripts/zip-deploy.sh rollback "$SITE" "$ROLLBACK_TO"
+
+      - name: Purge the Cloudflare cache
+        if: steps.preflight.outputs.cloudflare == 'true'
+        continue-on-error: true
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ZONE_ID: ${{ secrets.CLOUDFLARE_ZONE_ID }}
+        run: bash .github/scripts/cloudflare-purge.sh
+
+      - name: Smoke test the live site
+        env:
+          SITE: ${{ steps.preflight.outputs.site_url }}
+          DEPLOY_HOOK_TOKEN: ${{ secrets.DEPLOY_HOOK_TOKEN }}
+          # Back on the site from before the first release: its home page only.
+          SMOKE_PATHS: ${{ steps.rollback.outputs.release == 'none' && '/' || vars.SMOKE_PATHS || '/' }}
+          SMOKE_EXPECT_RELEASE: ${{ steps.rollback.outputs.release }}
+          SMOKE_TAG: ${{ github.run_id }}
+        run: bash .github/scripts/smoke-test.sh "$SITE"
+
+      - name: Summary
+        if: always()
+        env:
+          RELEASE: ${{ steps.rollback.outputs.release }}
+          FROM: ${{ steps.rollback.outputs.rolled_back_from }}
+          STATUS: ${{ job.status }}
+        run: |
+          {
+            echo "### Rollback $([[ "$STATUS" == success ]] && echo succeeded || echo 'did not finish')"
+            if [[ -n "$RELEASE" ]]; then echo "- Live now: \`$([[ "$RELEASE" == none ]] && echo 'the site from before the first release' || echo "$RELEASE")\` (was \`${FROM:-?}\`)"; fi
+            echo "- Nothing app/deploy/after-unpack.php did (a database migration) was undone."
+            echo "- The next push or deploy of \`main\` deploys \`main\` again: revert the bad commit first."
+          } >> "$GITHUB_STEP_SUMMARY"

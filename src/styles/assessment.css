@@ -1,0 +1,137 @@
+/* Lead funnel. Owned by the assessment component (src/components/assessment). Uses brand tokens only. */
+/* ================= Assessment (lead funnel) ================= */
+.assess {
+  position: relative; padding: clamp(22px, 3vw, 32px); border-radius: var(--radius-lg); background: var(--white); color: var(--ink);
+  box-shadow: var(--shadow-2); box-sizing: border-box;
+}
+.assess--page { box-shadow: var(--shadow-1); border: 1px solid var(--line); }
+.assess--hero { box-shadow: 0 2px 6px rgba(13, 16, 54, 0.12), 0 40px 90px -30px rgba(0, 0, 0, 0.6); }
+
+.assess__top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; min-height: 34px; margin-bottom: 16px; }
+.assess__free { font-size: 0.85rem; font-weight: 600; color: var(--ink-2); }
+.assess__back {
+  display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 6px 12px 6px 8px; margin-left: -8px; border: 0; border-radius: 999px;
+  background: none; font: inherit; font-size: 0.92rem; font-weight: 700; color: var(--ink-2); cursor: pointer; transition: background-color 200ms, color 200ms;
+}
+.assess__back:hover { color: var(--ink); background: var(--mist); }
+.assess__progress { display: flex; gap: 6px; flex: none; margin-left: auto; }
+.assess__progress i { position: relative; width: 26px; height: 5px; border-radius: 3px; background: var(--line); overflow: hidden; }
+.assess__progress i::after { content: ''; position: absolute; inset: 0; border-radius: inherit; background: var(--red); transform: scaleX(0); transform-origin: left; transition: transform 500ms var(--expo); }
+.assess__progress i.on::after, .assess__progress i.done::after { transform: scaleX(1); }
+.assess__progress i.done::after { background: var(--navy); }
+
+.assess__step { animation: assessIn 460ms var(--expo); container-type: inline-size; }
+.assess__step--back { animation-name: assessBack; }
+@keyframes assessIn { from { opacity: 0; transform: translateX(22px); } }
+@keyframes assessBack { from { opacity: 0; transform: translateX(-22px); } }
+.assess__q { margin: 0 0 16px; font-size: clamp(1.35rem, 1.15rem + 0.6vw, 1.7rem); line-height: 1.15; letter-spacing: -0.025em; font-weight: 700; text-wrap: balance; }
+.assess__q:focus { outline: none; }
+.assess__sub { margin: -10px 0 4px; font-size: 0.95rem; color: var(--ink-2); }
+
+/* ---- One-tap options ---- */
+.assess__opts { display: grid; gap: 10px; }
+.assess__opts--2 { grid-template-columns: 1fr 1fr; }
+.assess__opts--1 { grid-template-columns: 1fr; }
+.opt {
+  position: relative; display: flex; align-items: center; gap: 12px; min-height: 60px; padding: 10px 42px 10px 12px; box-sizing: border-box;
+  border: 1.5px solid var(--line); border-radius: 16px; background: var(--white); color: var(--ink);
+  font: inherit; font-size: 0.98rem; font-weight: 650; line-height: 1.25; text-align: left; cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: border-color 200ms var(--expo), background-color 200ms var(--expo), transform 200ms var(--expo), box-shadow 200ms var(--expo);
+}
+.opt:focus-visible { outline: 3px solid var(--red); outline-offset: 2px; }
+.opt:active { transform: scale(0.98); }
+.opt--wide { grid-column: 1 / -1; }
+/* Narrow cards (wherever they're placed): one option per row so labels never break into three lines. */
+@container (max-width: 380px) { .assess__opts--2 { grid-template-columns: 1fr; } }
+.opt__icon {
+  flex: none; display: grid; place-items: center; width: 38px; height: 38px; border-radius: 12px; background: var(--mist); color: var(--navy);
+  transition: background-color 200ms, color 200ms, transform 300ms var(--expo);
+}
+.opt__tick {
+  position: absolute; right: 14px; top: 50%; translate: 0 -50%; display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%;
+  border: 1.5px solid var(--line); color: transparent; transition: background-color 200ms var(--expo), border-color 200ms var(--expo), color 200ms var(--expo), transform 300ms var(--expo);
+}
+@media (hover: hover) {
+  .opt:hover { border-color: var(--navy); box-shadow: 0 10px 22px -16px rgba(13, 16, 54, 0.55); }
+  .opt:hover .opt__icon { background: var(--navy); color: var(--white); }
+  .opt:hover .opt__tick { border-color: var(--navy); }
+}
+.opt--on, .opt--on:hover { border-color: var(--red); background: var(--red-soft); }
+.opt--on .opt__icon, .opt--on:hover .opt__icon { background: var(--red); color: var(--white); }
+.opt--on .opt__tick, .opt--on:hover .opt__tick { background: var(--red); border-color: var(--red); color: var(--white); animation: tickPop 420ms var(--expo); }
+@keyframes tickPop { from { transform: scale(0.4); } }
+
+/* ---- Contact step ---- */
+.assess__form { display: grid; gap: 14px; }
+.assess__form .assess__q { margin-bottom: 4px; }
+.field { display: grid; gap: 6px; }
+.field label { font-size: 0.9rem; font-weight: 700; }
+.field__opt { font-weight: 500; color: var(--ink-2); }
+.field input, .field select, .field textarea {
+  width: 100%; box-sizing: border-box; min-height: 54px; padding: 0 16px; border: 1.5px solid var(--ink-3); border-radius: 14px;
+  background: var(--white); color: var(--ink); font: inherit; font-size: 1.02rem; transition: border-color 200ms, box-shadow 200ms;
+  scroll-margin-block: 96px 120px; /* keep focused fields clear of the sticky header and the mobile contact bar */
+}
+.field input::placeholder { color: var(--ink-3); opacity: 1; }
+.field textarea { min-height: 120px; padding-block: 14px; resize: vertical; }
+.field input:hover, .field select:hover, .field textarea:hover { border-color: var(--ink-2); }
+.field input:focus, .field select:focus, .field textarea:focus { outline: none; border-color: var(--navy); box-shadow: 0 0 0 4px rgba(49, 52, 106, 0.14); }
+.field [aria-invalid='true'], .field [aria-invalid='true']:hover { border-color: var(--red); background: var(--red-soft); }
+.field [aria-invalid='true']:focus { box-shadow: 0 0 0 4px rgba(224, 38, 45, 0.16); }
+.field__wrap { position: relative; }
+.field__wrap input { padding-right: 48px; }
+.field__ok {
+  position: absolute; right: 14px; top: 50%; display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%;
+  background: var(--green); color: var(--white); opacity: 0; transform: translateY(-50%) scale(0.5); pointer-events: none;
+  transition: opacity 220ms var(--expo), transform 360ms var(--expo);
+}
+.field__wrap--ok .field__ok { opacity: 1; transform: translateY(-50%) scale(1); }
+.field__err { display: flex; align-items: flex-start; gap: 6px; margin: 0; font-size: 0.86rem; font-weight: 600; line-height: 1.4; color: var(--red-hi); animation: errIn 300ms var(--expo); }
+.field__err svg { flex: none; margin-top: 2px; }
+@keyframes errIn { from { opacity: 0; transform: translateY(-4px); } }
+.check { display: flex; gap: 12px; align-items: flex-start; min-height: 44px; font-size: 0.9rem; line-height: 1.45; color: var(--ink-2); cursor: pointer; }
+.check input { flex: none; width: 22px; height: 22px; margin: 1px 0 0; accent-color: var(--red); cursor: pointer; scroll-margin-block: 96px 120px; }
+.check a { color: var(--ink); font-weight: 700; }
+.check--err { color: var(--red-hi); }
+.hp { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+.assess__submit { margin-top: 4px; scroll-margin-block: 96px 120px; }
+.assess__private { display: flex; align-items: center; justify-content: center; gap: 6px; margin: 0; font-size: 0.82rem; color: var(--ink-2); }
+
+/* ---- Done / error ---- */
+.assess__lead { margin: 0 0 18px; color: var(--ink-2); }
+.assess__stack { display: grid; gap: 10px; }
+.assess__retry {
+  display: inline-flex; justify-content: center; align-items: center; gap: 6px; min-height: 44px; padding: 10px; border: 0; background: none;
+  font: inherit; font-size: 0.92rem; font-weight: 700; color: var(--ink-2); cursor: pointer; text-decoration: underline; text-underline-offset: 3px;
+}
+.assess__retry:hover { color: var(--ink); }
+.assess--done .assess__retry { width: 100%; margin-top: 6px; }
+.assess--done { text-align: left; }
+/* The brand ring, finished in green: the "approved" moment. */
+.assess__done-ring { width: 64px; height: 64px; margin-bottom: 18px; overflow: visible; }
+.assess__done-ring circle, .assess__done-ring path { fill: none; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 1; }
+.assess__done-ring circle { stroke: var(--green); stroke-width: 4; transform: rotate(-90deg); transform-origin: center; animation: ringDraw 900ms var(--expo) both; }
+.assess__done-ring path { stroke: var(--green); stroke-width: 5; animation: ringDraw 520ms var(--expo) 520ms both; }
+@keyframes ringDraw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+.assess__next { display: grid; gap: 10px; margin: 0 0 22px; padding: 0; list-style: none; }
+.assess__next li { display: flex; align-items: center; gap: 12px; font-weight: 600; }
+.assess__next span { flex: none; display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: var(--mist); font-size: 0.85rem; font-weight: 800; }
+
+@media (max-width: 520px) {
+  .assess { padding: 18px 18px 22px; border-radius: 24px; }
+  /* Progress becomes a full-width strip on top so the reassurance line never wraps. */
+  .assess__top { flex-wrap: wrap; row-gap: 12px; margin-bottom: 12px; }
+  .assess__progress { order: -1; flex: 1 0 100%; margin-left: 0; }
+  .assess__progress i { flex: 1; width: auto; height: 4px; }
+  .assess__opts { gap: 8px; }
+  .assess__opts--2 { grid-template-columns: 1fr; }
+  .opt { min-height: 54px; padding-block: 8px; font-size: 1rem; }
+  .opt__icon { width: 36px; height: 36px; }
+}
+
+/* While someone is typing into the funnel on a phone, slide the sticky contact bar (layout's .mbar)
+   out of the way so it can never sit on top of the fields or the submit button. */
+@media (max-width: 720px) {
+  html:has(.assess__form input:focus, .assess__submit:focus) .mbar { opacity: 0; visibility: hidden; pointer-events: none; }
+}
