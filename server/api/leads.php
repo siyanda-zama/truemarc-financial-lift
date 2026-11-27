@@ -1,7 +1,7 @@
 <?php
 /**
  * Truemarc leads inbox: https://truemarc.co.za/api/leads.php
- * Password = admin_password_hash in config.php. Create one with:
+ * Password: LEADS_ADMIN_PASSWORD_HASH in ~/<APP_DIR>/.env on the server. Create the hash with:
  *   php -r "echo password_hash('your-long-passphrase', PASSWORD_DEFAULT), PHP_EOL;"
  * ?export=csv downloads every lead (or the current search) for Excel/Google Sheets.
  */
@@ -22,7 +22,7 @@ header("Content-Security-Policy: default-src 'none'; style-src 'unsafe-inline'; 
 
 if (empty($cfg['admin_password_hash'])) {
     http_response_code(503);
-    exit('Not configured: set admin_password_hash in api/config.php (see config.example.php).');
+    exit('Not configured: set LEADS_ADMIN_PASSWORD_HASH in the server .env (see .env.example).');
 }
 
 session_name('tm_admin');

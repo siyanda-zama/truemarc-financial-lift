@@ -28,3 +28,7 @@ dist-ssr
 .env
 .env.*
 !.env.example
+
+# --- domains-cpanel-deploy ---
+# Anchored on purpose: on macOS (case-insensitive) a bare `deploy/` also matches e.g. src/Deploy/.
+/deploy/

@@ -20,7 +20,7 @@ Benchmark: SA banks (Old Mutual, Standard Bank, African Bank) for polish and tru
 - Signature shape: the logo's **red ring** (+ navy "T" swoosh): `<Ring />` from `@/components/brand/Brand`.
   It doubles as a **credit score ring** (red → green = the client's story). Use ONE per view, give it a job.
 - Logo: `<Logo />` (dark text, for white grounds) or `<Logo tone="light" />` (for dark grounds). Never re-typeset it.
-- Photos: `/media/team-hero.webp`, `/media/consultant-female.webp`, `/media/consultant-male.webp` (+ `-960` versions).
+- Photos (static images live in `/img/`; `/media/` is reserved on the server for runtime uploads): `/img/team-hero.webp`, `/img/consultant-female.webp`, `/img/consultant-male.webp` (+ `-960` versions).
   Stock-style; we will replace with real team photos later. Prefer bespoke CSS/SVG visuals
   (credit report cards, score rings, documents, stamps) over more stock.
 - Section rhythm: alternate grounds (night → white → mist → night). Generous space: `.sec` uses `--sec` padding.
@@ -92,7 +92,7 @@ entrances and leaves on-screen `[data-reveal]` blocks alone. Guard any custom on
 | Home agent | `src/pages/Home.tsx`, `src/components/home/*`, `src/styles/pages/home.css`, `src/components/assessment/*`, `src/styles/assessment.css` |
 | Services agent | `src/pages/services/*`, `src/pages/HowItWorks.tsx`, `src/components/services/*`, `src/content/services.ts`, `src/styles/pages/services.css` |
 | Company & content agent | `src/pages/About.tsx`, `Contact.tsx`, `FreeAssessment.tsx`, `Privacy.tsx`, `Terms.tsx`, `NotFound.tsx`, `src/pages/learn/*`, `src/content/articles.ts`, `src/components/company/*`, `src/styles/pages/company.css`, `src/styles/pages/learn.css` |
-| SEO & technical agent | `index.html`, `vite.config.ts`, `src/main.tsx`, `src/entry-server.tsx`, `scripts/*`, `public/*`, `package.json` scripts, `src/components/Seo.tsx`, `src/lib/schema.ts`, `src/components/layout/*`, `src/components/ui/*` |
+| SEO & technical agent | `index.html`, `vite.config.ts`, `src/main.tsx`, `src/entry-server.tsx`, `scripts/*`, `public/*`, `server/api/*`, `deploy-kit/*`, `.github/*`, `package.json` scripts, `src/components/Seo.tsx`, `src/lib/schema.ts`, `src/components/layout/*` |
 Need a change in someone else's file? Don't make it: describe it in your final report.
 
 ## Verify before you report

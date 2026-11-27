@@ -36,7 +36,7 @@ export default function HomeServices() {
 
           <aside className="home-svc__hot" aria-labelledby="svc-hot-title" data-reveal>
             <div className="home-svc__hot-media" aria-hidden="true">
-              <img src="/media/consultant-male-960.webp" alt="" width={960} height={540} loading="lazy" decoding="async" />
+              <img src="/img/consultant-male-960.webp" alt="" width={960} height={540} loading="lazy" decoding="async" />
             </div>
             <div className="home-svc__hot-body">
               <h3 id="svc-hot-title">Not sure which one you need?</h3>

@@ -36,7 +36,7 @@ export function organizationLd() {
     name: BUSINESS.name,
     url: SITE_URL,
     logo: LOGO,
-    image: `${SITE_URL}/media/team-hero.webp`,
+    image: `${SITE_URL}/img/team-hero.webp`,
     slogan: 'Impacting lives',
     foundingDate: String(BUSINESS.founded),
     telephone: BUSINESS.phones[0].tel,
@@ -93,6 +93,6 @@ export function articleLd({ title, description, path, datePublished, dateModifie
     author: orgRef(),
     publisher: orgRef(),
     inLanguage: 'en-ZA',
-    image: { '@type': 'ImageObject', url: `${SITE_URL}/media/share-2026-11.jpg`, width: 1200, height: 630 },
+    image: { '@type': 'ImageObject', url: `${SITE_URL}/img/share-2026-11.jpg`, width: 1200, height: 630 },
   }
 }

@@ -37,8 +37,8 @@ export default function HomeTalk() {
       <div className="home-talk__media">
         <img
           data-parallax
-          src="/media/team-hero.webp"
-          srcSet="/media/team-hero-960.webp 960w, /media/team-hero.webp 1920w"
+          src="/img/team-hero.webp"
+          srcSet="/img/team-hero-960.webp 960w, /img/team-hero.webp 1920w"
           sizes="100vw"
           alt="Consultants talking with clients around a table"
           width={1920}

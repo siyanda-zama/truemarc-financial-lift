@@ -1,34 +1,85 @@
 <?php
-// Shared helpers for lead.php and leads.php. Not reachable over HTTP (.htaccess denies files starting with "_").
+// Shared helpers for lead.php and leads.php. Not reachable over HTTP: the site's .htaccess only lets
+// api/lead.php and api/leads.php run, and this file also refuses to run as a request target.
 declare(strict_types=1);
 
 if (PHP_SAPI !== 'cli' && realpath($_SERVER['SCRIPT_FILENAME'] ?? '') === __FILE__) { http_response_code(404); exit; }
 
 date_default_timezone_set('Africa/Johannesburg');
 
-/** Settings from config.php (gitignored; copy config.example.php). Every key has a safe default. */
+/**
+ * Where the site keeps its private files on the server: ~/<APP_DIR>/ (outside the web root and outside every
+ * release, so deploys and rollbacks never touch it). These files are installed into ~/public_html/api/, so the
+ * cPanel home is two folders up. The build replaces __APP_DIR__ with the deploy's APP_DIR.
+ */
+function tm_app_home(): string
+{
+    $override = getenv('TM_APP_HOME');
+    if (is_string($override) && $override !== '') return rtrim($override, '/');
+    $appDir = '__APP_DIR__';
+    if (str_starts_with($appDir, '__')) $appDir = 'truemarc_app';
+    return dirname(__DIR__, 2) . '/' . $appDir;
+}
+
+/** Minimal .env reader: KEY=VALUE, optional "export ", quotes, CRLF, full-line and inline (" #") comments. */
+function tm_env(): array
+{
+    static $env = null;
+    if ($env !== null) return $env;
+    $env = [];
+    $file = tm_app_home() . '/.env';
+    if (!is_readable($file)) return $env;
+    foreach (preg_split('/\r\n|\n|\r/', (string)file_get_contents($file)) as $line) {
+        $line = trim($line);
+        if ($line === '' || $line[0] === '#') continue;
+        if (str_starts_with($line, 'export ')) $line = ltrim(substr($line, 7));
+        $eq = strpos($line, '=');
+        if ($eq === false) continue;
+        $key = trim(substr($line, 0, $eq));
+        $val = trim(substr($line, $eq + 1));
+        if ($val !== '' && ($val[0] === '"' || $val[0] === "'")) {
+            $q = $val[0];
+            $close = strpos($val, $q, 1);
+            $val = $close === false ? substr($val, 1) : substr($val, 1, $close - 1);
+        } else {
+            $val = trim((string)preg_replace('/\s+#.*$/', '', $val));
+        }
+        if (preg_match('/^[A-Z0-9_]+$/', $key)) $env[$key] = $val;
+    }
+    return $env;
+}
+
+/** Settings from ~/<APP_DIR>/.env (keys listed in .env.example). Every key has a safe default. */
 function tm_config(): array
 {
     static $cfg = null;
     if ($cfg !== null) return $cfg;
-    $defaults = [
-        'notify_to' => ['admin@truemarc.co.za'],
-        'mail_from' => 'website@truemarc.co.za',
-        'mail_from_name' => 'Truemarc website',
-        'smtp' => ['host' => '', 'port' => 587, 'secure' => 'tls', 'user' => '', 'pass' => '', 'timeout' => 10],
-        'data_dir' => __DIR__ . '/data',
-        'allowed_origins' => ['https://truemarc.co.za', 'https://www.truemarc.co.za'],
-        'rate_limit' => ['per_10_min' => 8, 'per_day' => 40],
-        'admin_password_hash' => '',
-        'secret' => '',
+    $e = tm_env();
+    $get = static fn(string $k, string $d = ''): string => ($e[$k] ?? '') !== '' ? $e[$k] : $d;
+    $list = static fn(string $v): array => array_values(array_filter(array_map('trim', preg_split('/[\s,]+/', $v) ?: [])));
+    $site = rtrim($get('APP_URL', 'https://truemarc.co.za'), '/');
+    $host = (string)parse_url($site, PHP_URL_HOST);
+    $cfg = [
+        'notify_to' => $list($get('LEAD_NOTIFY_TO', 'admin@truemarc.co.za')),
+        'mail_from' => $get('MAIL_FROM', 'website@truemarc.co.za'),
+        'mail_from_name' => $get('MAIL_FROM_NAME', 'Truemarc website'),
+        'smtp' => [
+            'host' => $get('SMTP_HOST'),
+            'port' => (int)$get('SMTP_PORT', '465'),
+            'secure' => strtolower($get('SMTP_SECURE', 'ssl')),
+            'user' => $get('SMTP_USERNAME', $get('MAIL_FROM', 'website@truemarc.co.za')),
+            'pass' => $get('SMTP_PASSWORD'),
+            'timeout' => 10,
+        ],
+        'data_dir' => tm_app_home() . '/storage/leads',
+        'allowed_origins' => array_values(array_unique(array_merge(
+            [$site, 'https://' . (str_starts_with($host, 'www.') ? substr($host, 4) : 'www.' . $host)],
+            $list($get('LEADS_ALLOWED_ORIGINS'))
+        ))),
+        'rate_limit' => ['per_10_min' => (int)$get('LEADS_RATE_10MIN', '8'), 'per_day' => (int)$get('LEADS_RATE_DAY', '40')],
+        'admin_password_hash' => $get('LEADS_ADMIN_PASSWORD_HASH'),
+        'secret' => $get('LEADS_SECRET'),
     ];
-    $file = __DIR__ . '/config.php';
-    $user = is_file($file) ? (require $file) : [];
-    if (!is_array($user)) $user = [];
-    $cfg = array_replace($defaults, $user);
-    $cfg['smtp'] = array_replace($defaults['smtp'], (array)($user['smtp'] ?? []));
-    $cfg['rate_limit'] = array_replace($defaults['rate_limit'], (array)($user['rate_limit'] ?? []));
-    $cfg['notify_to'] = array_values(array_filter((array)$cfg['notify_to']));
     return $cfg;
 }
 
@@ -256,7 +307,7 @@ function tm_recent(int $limit = 300, string $q = ''): array
 }
 
 // ---------------------------------------------------------------------------
-// Mail: SMTP (preferred, set in config.php) or PHP mail()
+// Mail: SMTP (preferred; SMTP_* in the server .env) or PHP mail()
 // ---------------------------------------------------------------------------
 
 function tm_header_safe(string $s): string

@@ -10,7 +10,7 @@ const files = []
 ;(function walk(dir) {
   for (const f of fs.readdirSync(dir, { withFileTypes: true })) {
     const p = path.join(dir, f.name)
-    if (f.isDirectory()) { if (!['assets', 'api', 'media', 'brand', 'icons'].includes(f.name)) walk(p) }
+    if (f.isDirectory()) { if (!['assets', 'api', 'img', 'brand', 'icons'].includes(f.name)) walk(p) }
     else if (f.name.endsWith('.html')) files.push(p)
   }
 })(DIST)

@@ -82,7 +82,7 @@ const DRAFTS: Draft[] = [
     ],
     sources: [
       { label: 'National Credit Act 34 of 2005 (section 72)', url: 'https://www.gov.za/sites/default/files/gcis_document/201409/a34-050_0.pdf' },
-      { label: 'National Credit Amendment Act 19 of 2014 (section 71A)', url: 'https://www.parliament.gov.za/storage/app/media/Acts/2014/Act_19_of_2014_National_Credit_Amendment_Act.pdf' },
+      { label: 'National Credit Amendment Act 19 of 2014 (section 71A)', url: 'https://www.parliament.gov.za/storage/app/img/Acts/2014/Act_19_of_2014_National_Credit_Amendment_Act.pdf' },
       { label: 'Experian: Your right of access to your credit report', url: 'https://www.experian.co.za/legal/trust-centre/consumer-trust-centre/data-rights/right-of-access' },
       { label: 'Experian: Completion of the acquisition of Compuscan (2019)', url: 'https://www.experianplc.com/newsroom/press-releases/2019/completion-of-acquisition-of-compuscan' },
       { label: 'NCR: Guideline on disputes (December 2025)', url: 'https://www.ncr.org.za/documents/Guidelines/Guideline%20December%202025.pdf' },
@@ -144,7 +144,7 @@ const DRAFTS: Draft[] = [
       { label: 'Courts of Law Amendment Act 7 of 2017', url: 'https://www.gov.za/sites/default/files/gcis_document/201708/410172-82017act7of2017courtsoflawamendacta.pdf' },
       { label: 'Amended Magistrates’ Courts Rules, rule 49 (GN R632 of 2018)', url: 'https://www.gov.za/sites/default/files/gcis_document/201806/41723rg10840gon632.pdf' },
       { label: 'National Credit Amendment Regulations, 2015 (regulation 17)', url: 'https://www.gov.za/sites/default/files/gcis_document/201503/38557rg10382gon202.pdf' },
-      { label: 'National Credit Amendment Act 19 of 2014 (section 71A)', url: 'https://www.parliament.gov.za/storage/app/media/Acts/2014/Act_19_of_2014_National_Credit_Amendment_Act.pdf' },
+      { label: 'National Credit Amendment Act 19 of 2014 (section 71A)', url: 'https://www.parliament.gov.za/storage/app/img/Acts/2014/Act_19_of_2014_National_Credit_Amendment_Act.pdf' },
     ],
   },
   {
@@ -200,7 +200,7 @@ const DRAFTS: Draft[] = [
       { label: 'NCR: Explanatory note to the Withdrawal Guidelines (01 of 2022)', url: 'https://ncr.org.za/documents/Explanatory%20Note%20to%20the%20Withdrawal%20Guidelines-01%20of%202022.pdf' },
       { label: 'NCR: Withdrawal from debt review guidelines (2021)', url: 'https://ncr.org.za/documents/27%20May%202021-Debt%20Withdrawal%20%20review.pdf' },
       { label: 'NCR: Circular 2 of 2025 on debt review removal', url: 'https://www.ncr.org.za/documents/Circulars/Circular%202%20of%202025%20-%20Debt%20Review%20Removal%20(003)%20(002).pdf' },
-      { label: 'National Credit Amendment Act 19 of 2014 (section 71)', url: 'https://www.parliament.gov.za/storage/app/media/Acts/2014/Act_19_of_2014_National_Credit_Amendment_Act.pdf' },
+      { label: 'National Credit Amendment Act 19 of 2014 (section 71)', url: 'https://www.parliament.gov.za/storage/app/img/Acts/2014/Act_19_of_2014_National_Credit_Amendment_Act.pdf' },
     ],
   },
   {
@@ -264,7 +264,7 @@ const DRAFTS: Draft[] = [
     sources: [
       { label: 'National Credit Regulations, 2006 (regulations 17 and 19)', url: 'https://www.gov.za/sites/default/files/gcis_document/201409/28864.pdf' },
       { label: 'National Credit Amendment Regulations, 2015 (Government Gazette 38557)', url: 'https://www.gov.za/sites/default/files/gcis_document/201503/38557rg10382gon202.pdf' },
-      { label: 'National Credit Amendment Act 19 of 2014 (section 71A)', url: 'https://www.parliament.gov.za/storage/app/media/Acts/2014/Act_19_of_2014_National_Credit_Amendment_Act.pdf' },
+      { label: 'National Credit Amendment Act 19 of 2014 (section 71A)', url: 'https://www.parliament.gov.za/storage/app/img/Acts/2014/Act_19_of_2014_National_Credit_Amendment_Act.pdf' },
       { label: 'NCR: Guideline on disputes (December 2025)', url: 'https://www.ncr.org.za/documents/Guidelines/Guideline%20December%202025.pdf' },
     ],
   },
@@ -377,7 +377,7 @@ const DRAFTS: Draft[] = [
     sources: [
       { label: 'TransUnion CreditView: Frequently asked questions', url: 'https://creditview.transunion.co.za/Help/FAQ' },
       { label: 'Experian: Free credit check and credit report', url: 'https://www.experian.co.za/consumer/my-free-credit-check-and-your-free-credit-report' },
-      { label: 'National Credit Amendment Act 19 of 2014 (section 71A)', url: 'https://www.parliament.gov.za/storage/app/media/Acts/2014/Act_19_of_2014_National_Credit_Amendment_Act.pdf' },
+      { label: 'National Credit Amendment Act 19 of 2014 (section 71A)', url: 'https://www.parliament.gov.za/storage/app/img/Acts/2014/Act_19_of_2014_National_Credit_Amendment_Act.pdf' },
       { label: 'National Credit Act 34 of 2005', url: 'https://www.gov.za/sites/default/files/gcis_document/201409/a34-050_0.pdf' },
     ],
   },

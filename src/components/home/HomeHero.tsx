@@ -21,8 +21,8 @@ export default function HomeHero() {
       <div className="home-hero__media">
         <img
           className="home-hero__img"
-          src="/media/consultant-female.webp"
-          srcSet="/media/consultant-female-960.webp 960w, /media/consultant-female.webp 1920w"
+          src="/img/consultant-female.webp"
+          srcSet="/img/consultant-female-960.webp 960w, /img/consultant-female.webp 1920w"
           sizes="(min-width: 960px) 62vw, 100vw"
           width={1920}
           height={1080}

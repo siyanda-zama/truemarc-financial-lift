@@ -9,7 +9,7 @@ type Props = {
   description: string
   /** Route path, e.g. "/services/debt-review". Used for canonical + og:url. */
   path: string
-  /** Share image. Absolute URL or a site path ("/media/x.jpg"); defaults to the 1200×630 brand card. */
+  /** Share image. Absolute URL or a site path ("/img/x.jpg"); defaults to the 1200×630 brand card. */
   image?: string
   /** Alt text for a custom share image. */
   imageAlt?: string
@@ -25,7 +25,7 @@ type Props = {
   modified?: string
 }
 
-export const SHARE_IMAGE = `${SITE_URL}/media/share-2026-11.jpg`
+export const SHARE_IMAGE = `${SITE_URL}/img/share-2026-11.jpg`
 const SHARE_ALT = `${BUSINESS.name}: Declined for credit? Let's clear your name.`
 
 const abs = (u: string) => (/^https?:\/\//.test(u) ? u : `${SITE_URL}${u.startsWith('/') ? '' : '/'}${u}`)

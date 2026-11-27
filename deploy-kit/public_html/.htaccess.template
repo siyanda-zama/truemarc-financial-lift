@@ -1,0 +1,229 @@
+# Deploy kit: the document root's .htaccess for zip releases (Apache 2.4 or LiteSpeed on cPanel hosting).
+#
+# Source: deploy-kit/public_html/.htaccess.template in the repository. The workflow ships it as the release's
+# root/.htaccess (unless the build writes its own deploy/root/.htaccess), and the deploy receiver installs it
+# as ~/<DOCROOT>/.htaccess at every switch, keeping the blocks cPanel wrote into the live file (MultiPHP
+# handler, INI directives). Edit the copy in the repository, never the live file: every deploy replaces it.
+#
+# Never put PHP ini directives in this file: on PHP-FPM hosts they turn every request into a 500. Use
+# cPanel > MultiPHP INI Editor instead; it writes its own guarded block, which deploys keep.
+#
+#   _current/   the live release (a symlink, or a real folder in rename mode). The site is served from it.
+#   _previous/  the release before: serves the site during a rename-mode switch, and old hashed assets to
+#               pages that loaded just before a switch.
+#   _deploy/ media/ .well-known/ cgi-bin/   persistent, served from the real folder (and EXTRA PERSISTENT PATHS).
+
+Options -Indexes -MultiViews
+DirectoryIndex index.html index.php
+AddDefaultCharset utf-8
+ServerSignature Off
+FileETag MTime Size
+
+# The release's 404.html, with a real 404 status (rule 0 serves it from _current/).
+ErrorDocument 404 /404.html
+
+<IfModule mod_mime.c>
+  AddType text/javascript .js .mjs
+  AddType application/json .json .map
+  AddType application/manifest+json .webmanifest
+  AddType image/svg+xml .svg
+  AddType image/webp .webp
+  AddType image/avif .avif
+  AddType font/woff2 .woff2
+  AddType application/wasm .wasm
+</IfModule>
+
+# Never serve dotfiles (except .well-known), env files, logs, dumps, docs, configs or backups, even with
+# mod_rewrite off. These answer 403; the rewrite rules below answer 404 for the same names.
+<FilesMatch "(^\.(?!well-known$)|\.(env|ini|log|sql|sqlite3?|db|md|ya?ml|toml|bak|old|orig|save|swp|swo|tmp|dist|sh)$|~$|^error_log$|^(composer|package)(-lock)?\.(json|lock)$)">
+  <IfModule mod_authz_core.c>
+    Require all denied
+  </IfModule>
+  <IfModule !mod_authz_core.c>
+    Order allow,deny
+    Deny from all
+  </IfModule>
+</FilesMatch>
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+
+  # Cache classes for the headers below (no [L]). They match with or without the _current/ prefix: Apache
+  # runs these rules again on the rewritten path (LiteSpeed does not), and by then the variables of the
+  # first pass are renamed REDIRECT_*.
+  #   DK_IMMUTABLE = content-hashed, cached for a year: build tools' hashed folders, and scripts, styles and
+  #   fonts whose name carries a hash (app.3f2a9c1b.js, index-B9x3kQ2a.css). Rename such a file when it changes.
+  RewriteRule (?:^|/)(?:_next/static|_astro|_app/immutable|_expo/static|static/(?:js|css|media))/ - [E=DK_IMMUTABLE:1]
+  RewriteRule [.-](?=[0-9a-f]*[0-9])(?=[0-9a-f]*[a-f])[0-9a-f]{8,64}\.(?:m?js|css|map|woff2?|ttf|otf|eot|wasm)$ - [E=DK_IMMUTABLE:1]
+  RewriteRule -(?=[A-Za-z0-9_-]{0,7}[0-9])(?=[A-Za-z0-9_-]{0,7}[A-Z])[A-Za-z0-9_-]{8}\.(?:m?js|css|map|woff2?|ttf|otf|eot|wasm)$ - [E=DK_IMMUTABLE:1]
+  #   EXTRA IMMUTABLE FOLDERS: add a line if your build writes hashed names into a folder of its own, e.g.
+  # RewriteRule (?:^|/)build/assets/ - [E=DK_IMMUTABLE:1]
+
+  # 0. Error pages (ErrorDocument) are served as they are, from the live release when it has one.
+  RewriteCond %{ENV:REDIRECT_STATUS} ^[45]
+  RewriteCond %{DOCUMENT_ROOT}/_current/404.html -f
+  RewriteRule ^404\.html$ _current/404.html [L]
+  RewriteCond %{ENV:REDIRECT_STATUS} ^[45]
+  RewriteRule ^ - [L]
+
+  # 1. _current/ and _previous/ never appear in URLs. Apache's second pass over a path these rules rewrote
+  #    (REDIRECT_STATUS is set) goes through; a browser asking for them directly gets a 404.
+  RewriteCond %{ENV:REDIRECT_STATUS} .
+  RewriteRule ^_(?:current|previous)/ - [L]
+  RewriteRule ^_(?:current|previous)(?:/|$) - [R=404,L]
+
+  # 2. Certificate validation (cPanel AutoSSL, Let's Encrypt) must pass over plain HTTP, untouched.
+  RewriteRule ^\.well-known/(?:acme-challenge|pki-validation|cpanel-dcv)/ - [L]
+
+  # 3. HTTPS. Behind Cloudflare's "Flexible" SSL the origin receives plain HTTP for an HTTPS visit, so the
+  #    proxy's scheme headers count too; redirecting when either says https would loop forever.
+  RewriteCond %{HTTPS} !=on
+  RewriteCond %{HTTP:X-Forwarded-Proto} !https [NC]
+  RewriteCond %{HTTP:CF-Visitor} !https [NC]
+  RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
+
+  # Optional: one canonical host. Uncomment to send www. to the bare domain (set the same in Cloudflare).
+  # Truemarc: on. Canonical URLs, the sitemap and og:url all use https://truemarc.co.za.
+  RewriteCond %{HTTP_HOST} ^www\.(.+)$ [NC]
+  RewriteRule ^ https://%1%{REQUEST_URI} [R=301,L]
+
+  # Truemarc: old URLs from the previous site.
+  RewriteRule ^why-choose-us/?$ https://%{HTTP_HOST}/about [R=301,L,NC]
+
+  # 4. Hidden and server-only names anywhere in the path: dotfiles and dot-folders, env files, logs, dumps,
+  #    docs, configs and backups.
+  RewriteRule (?:^|/)\.(?!well-known/) - [R=404,L]
+  RewriteRule \.(?:env|ini|log|sql|sqlite3?|db|md|ya?ml|toml|bak|old|orig|save|swp|swo|tmp|dist|sh)$ - [R=404,L,NC]
+  RewriteRule ~$ - [R=404,L]
+
+  # 5. EXTRA PERSISTENT PATHS: folders kept in the real document root (list them in DEPLOY_KEEP in
+  #    ~/<APP_DIR>/.env too) that must keep working exactly as before, with their own .htaccess and PHP,
+  #    e.g. a blog in /blog/. One line, names separated by |:
+  # RewriteRule ^(?:blog|old-shop)(?:/|$) - [L]
+
+  # 6. PHP: only the deploy hook may run, plus the form endpoints and your app's front controller once you
+  #    allow them here. Double extensions such as photo.php.jpg count too.
+  #    FORM ENDPOINTS (kit/mail): uncomment the next line to run the mail kit's form endpoints. The build
+  #    (.github/scripts/add-mailkit.sh) puts them in root/api/, which every switch installs into the REAL
+  #    ~/<DOCROOT>/api/, and this line serves them from there, never from _current/: their
+  #    mailkit-config.php finds the cPanel home by counting folders up from itself. List every endpoint,
+  #    separated by |, but never mailkit-config.php (it must answer 404). DK_APP: they send their own
+  #    Cache-Control (no-store) and security headers. It also wins over the front controller in rule 8.
+  # Truemarc: the lead endpoint and the leads inbox (deploy/root/api/, built by scripts/build-deploy.sh).
+  # _lib.php is deliberately NOT listed: it answers 404.
+  RewriteRule ^api/(?:lead|leads)\.php$ - [E=DK_APP:1,L]
+  RewriteCond %{REQUEST_URI} !^/_deploy/hook\.php$
+  # APP FRONT CONTROLLER: uncomment the next line together with the routing lines in rule 8.
+  # RewriteCond %{REQUEST_URI} !^/api/index\.php$
+  RewriteRule \.(?:php\d*|phtml|phar|pht|phps|inc)(?:\.|$) - [R=404,L,NC]
+
+  # 7. Persistent folders, always served from the real document root, never from a release.
+  #    /_deploy/: the hook, and the symlink probe the first release fetches. Nothing else.
+  RewriteRule ^_deploy/(?:hook\.php|probe-[0-9a-f]+/[0-9a-f]+\.txt)$ - [E=DK_NOSTORE:1,L]
+  RewriteRule ^_deploy(?:/|$) - [R=404,L]
+  #    /media/: files the site writes at runtime (uploads), never part of a deploy. Plain static files only:
+  #    script and page extensions anywhere in the name answer 404.
+  RewriteRule ^media/.*\.(?:php\d*|phtml|phar|pht|phps|cgi|fcgi|pl|py|rb|sh|shtml|asp|aspx|jsp|html?|xhtml|xml)(?:\.|$) - [R=404,L,NC]
+  RewriteRule ^media(?:/|$) - [E=DK_MEDIA:1,L]
+  RewriteRule ^(?:cgi-bin|\.well-known)(?:/|$) - [L]
+
+  # 8. APP FRONT CONTROLLER (PHP apps, optional): everything under /api/ goes to ~/<DOCROOT>/api/index.php,
+  #    which the release installs from root/api/index.php and which loads the live release's app/ through
+  #    ~/<DEPLOY_DIR>/current.json. Uncomment these lines and the allow line in rule 6. Authorization is
+  #    passed on explicitly because CGI/FastCGI PHP does not receive it otherwise.
+  # RewriteCond %{HTTP:Authorization} .
+  # RewriteRule ^api(?:/|$) - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+  # RewriteRule ^api/index\.php$ - [E=DK_APP:1,L]
+  # RewriteRule ^api(?:/|$) api/index.php [E=DK_APP:1,L]
+
+  # 9. Which tree serves the site: _current/, or _previous/ for the instant of a rename-mode switch.
+  RewriteCond %{DOCUMENT_ROOT}/_current/.deploy-release -f
+  RewriteRule ^ - [E=DK_ROOT:_current/]
+  RewriteCond %{ENV:DK_ROOT} ^$
+  RewriteCond %{DOCUMENT_ROOT}/_previous/.deploy-release -f
+  RewriteRule ^ - [E=DK_ROOT:_previous/]
+
+  # 10. Canonical URLs: /index.html -> /, /docs/index.html -> /docs, /about.html -> /about, /about/ -> /about.
+  #     Only for pages the release has, and only when the browser asked (THE_REQUEST), so internal rewrites
+  #     never loop. Search-engine verification files keep their .html.
+  RewriteCond %{ENV:DK_ROOT} .
+  RewriteCond %{THE_REQUEST} \.html[\s?] [NC]
+  RewriteCond %{DOCUMENT_ROOT}/%{ENV:DK_ROOT}$1 -f
+  RewriteRule ^((?:(.+)/)?index\.html)$ https://%{HTTP_HOST}/$2 [R=301,L]
+  RewriteCond %{ENV:DK_ROOT} .
+  RewriteCond %{THE_REQUEST} \.html[\s?] [NC]
+  RewriteCond $1 !^(?:google[0-9a-f]+|yandex_[0-9a-f]+|BingSiteAuth)\.html$
+  RewriteCond %{DOCUMENT_ROOT}/%{ENV:DK_ROOT}$1 -f
+  RewriteRule ^((.+)\.html)$ https://%{HTTP_HOST}/$2 [R=301,L]
+  RewriteCond %{ENV:DK_ROOT} .
+  RewriteCond %{DOCUMENT_ROOT}/%{ENV:DK_ROOT}$1.html -f [OR]
+  RewriteCond %{DOCUMENT_ROOT}/%{ENV:DK_ROOT}$1/index.html -f
+  RewriteRule ^(.+)/$ https://%{HTTP_HOST}/$1 [R=301,L]
+
+  # 11. The home page.
+  RewriteCond %{ENV:DK_ROOT} .
+  RewriteCond %{DOCUMENT_ROOT}/%{ENV:DK_ROOT}index.html -f
+  RewriteRule ^$ %{ENV:DK_ROOT}index.html [L]
+
+  # 12. The release's own files, then clean URLs: /about -> about.html, /docs -> docs/index.html.
+  RewriteCond %{ENV:DK_ROOT} .
+  RewriteCond %{DOCUMENT_ROOT}/%{ENV:DK_ROOT}$1 -f
+  RewriteRule ^(.+)$ %{ENV:DK_ROOT}$1 [L]
+  RewriteCond %{ENV:DK_ROOT} .
+  RewriteCond %{DOCUMENT_ROOT}/%{ENV:DK_ROOT}$1.html -f
+  RewriteRule ^(.+)$ %{ENV:DK_ROOT}$1.html [L]
+  RewriteCond %{ENV:DK_ROOT} .
+  RewriteCond %{DOCUMENT_ROOT}/%{ENV:DK_ROOT}$1/index.html -f
+  RewriteRule ^(.+)$ %{ENV:DK_ROOT}$1/index.html [L]
+
+  # 13. The release before, for assets only (never pages): a page that loaded just before a switch can
+  #     still fetch its old hashed scripts, styles, fonts and images.
+  RewriteCond %{ENV:DK_ROOT} =_current/
+  RewriteCond %{DOCUMENT_ROOT}/_previous/$1 -f
+  RewriteRule ^(.+\.(?:m?js|css|map|json|woff2?|ttf|otf|eot|png|jpe?g|gif|svg|webp|avif|ico|wasm))$ _previous/$1 [L,NC]
+
+  # 14. SPA FALLBACK (single-page app with client-side routing): uncomment to answer every other path
+  #     without a file extension with the app shell. Real 404s then only happen for missing files.
+  # RewriteCond %{ENV:DK_ROOT} .
+  # RewriteCond $1 !\.[A-Za-z0-9]{1,8}$
+  # RewriteRule ^(.*)$ %{ENV:DK_ROOT}index.html [L]
+
+  # Anything else: a file in the real document root (a verification file you uploaded, a DEPLOY_KEEP
+  # folder) is served as it is; everything else gets ErrorDocument 404 (the release's 404.html).
+</IfModule>
+
+<IfModule mod_headers.c>
+  Header always unset X-Powered-By
+  Header unset X-Powered-By
+
+  # Security headers. A PHP front controller (DK_APP) sends its own.
+  Header always set X-Content-Type-Options "nosniff" env=!DK_APP
+  Header always set X-Frame-Options "SAMEORIGIN" env=!DK_APP
+  Header always set Referrer-Policy "strict-origin-when-cross-origin" env=!DK_APP
+  Header always set Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), usb=(), browsing-topics=()" env=!DK_APP
+  # HSTS: set it in one place only, Cloudflare (SSL/TLS > Edge Certificates) or here. To set it here:
+  # Header always set Strict-Transport-Security "max-age=31536000" env=!DK_APP
+
+  # Caching. Hashed names never change: a year, immutable. HTML revalidates on every visit, so a deploy
+  # shows at once. Other files: an hour. The hook is never stored; a front controller decides for itself.
+  Header set Cache-Control "public, max-age=3600" env=!DK_APP
+  Header set Cache-Control "public, max-age=31536000, immutable" env=DK_IMMUTABLE
+  Header set Cache-Control "public, max-age=86400" env=DK_MEDIA
+  Header set Cache-Control "no-store" env=DK_NOSTORE
+  # Uploaded files are data, never documents: no scripts, no plugins, sandboxed if opened directly.
+  Header always set Content-Security-Policy "default-src 'none'; img-src 'self' data:; media-src 'self'; style-src 'unsafe-inline'; sandbox" env=DK_MEDIA
+  <FilesMatch "\.html?$">
+    Header set Cache-Control "no-cache"
+    # CONTENT SECURITY POLICY (optional): try it as Report-Only first and watch the browser console, then
+    # rename the header to Content-Security-Policy. Inline-script hashes ('sha256-...') right after
+    # script-src 'self' are merged across kept releases by the receiver, so a rollback keeps working.
+    # Header always set Content-Security-Policy-Report-Only "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self'; frame-ancestors 'self'; base-uri 'self'; form-action 'self'; object-src 'none'"
+  </FilesMatch>
+</IfModule>
+
+<IfModule mod_deflate.c>
+  <IfModule mod_filter.c>
+    AddOutputFilterByType DEFLATE text/html text/plain text/css text/javascript application/javascript application/json image/svg+xml application/xml application/manifest+json
+  </IfModule>
+</IfModule>
